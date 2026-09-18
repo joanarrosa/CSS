@@ -1,0 +1,49 @@
+# Example GitHub Action that gates a pipeline on css-audit.
+#
+# Copy this into your OWN site's repo as .github/workflows/css-audit.yml,
+# and change TARGET_URL below to the page you want checked (your deployed
+# site, a preview deployment, or a URL your own workflow just published).
+#
+# This is not wired into css-audit's own CI — css-audit is a tool you run
+# against other sites, not against itself.
+
+name: CSS Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  css-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # css-audit isn't published to npm yet (see README), so this example
+      # installs it from GitHub. Once it's on npm, replace this step with:
+      #   run: npx css-audit@latest "$TARGET_URL" --fail-on B
+      - name: Install css-audit
+        run: |
+          git clone --depth 1 https://github.com/joanarrosa/css.git /tmp/css-audit
+          cd /tmp/css-audit
+          npm install
+          npx playwright install chromium --with-deps
+
+      # Run from your repo root so a .css-auditrc.json there (if you have
+      # one) is picked up automatically — see the README's "Ignoring
+      # findings" section. No config file needed if you don't have one.
+      - name: Run css-audit
+        env:
+          TARGET_URL: https://example.com # <-- change this
+        run: node /tmp/css-audit/bin/css-audit.js "$TARGET_URL" --fail-on B
+
+      # Optional: also gate on the accessibility audit.
+      - name: Run accessibility audit
+        env:
+          TARGET_URL: https://example.com # <-- change this
+        run: node /tmp/css-audit/bin/css-audit.js "$TARGET_URL" --a11y-report --fail-on C

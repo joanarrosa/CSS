@@ -5,6 +5,7 @@ import { toJsonReport } from "./report/json.js";
 import { runAxeAudit, toAccessibilityReport } from "./axeAudit.js";
 import { printAccessibilityReport } from "./report/axeTerminal.js";
 import { loadConfig, warnIfConfigProblem } from "./config.js";
+import { parseFailOn, shouldFail } from "./utils/failOn.js";
 import { error as logError, info } from "./utils/logger.js";
 
 const HELP = `css-audit — analyze the CSS a page actually uses
@@ -13,12 +14,15 @@ Usage:
   css-audit <url> [options]
 
 Options:
-  --json          Output a machine-readable JSON report instead of the terminal report
-  --out <file>    Write the report to a file instead of stdout
-  --a11y-report   Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit
-  --config <file> Ignore-rules config (default: .css-auditrc.json in the current directory, if present)
-  --verbose       Print progress information to stderr
-  -h, --help      Show this help
+  --json           Output a machine-readable JSON report instead of the terminal report
+  --out <file>     Write the report to a file instead of stdout
+  --a11y-report    Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit
+  --config <file>  Ignore-rules config (default: .css-auditrc.json in the current directory, if present)
+  --fail-on <val>  Exit with code 1 if the result is worse than <val>: a letter grade (A-F,
+                    e.g. "B" fails on C/D/F) or a numeric score 0-100 (fails if score < val).
+                    For CI: gate a pipeline on css-audit without parsing its output.
+  --verbose        Print progress information to stderr
+  -h, --help       Show this help
 `;
 
 export async function main(argv) {
@@ -27,6 +31,16 @@ export async function main(argv) {
   if (args.help || !args.url) {
     process.stdout.write(HELP);
     process.exit(args.help ? 0 : 1);
+  }
+
+  let failOnThreshold = null;
+  if (args.failOn) {
+    try {
+      failOnThreshold = parseFailOn(args.failOn);
+    } catch (err) {
+      logError(err.message);
+      process.exit(2);
+    }
   }
 
   const config = warnIfConfigProblem(() => loadConfig(args.config));
@@ -55,7 +69,8 @@ export async function main(argv) {
         warnings: site.warnings,
         ...a11yReport,
       };
-      await writeReport(reportData, args, printAccessibilityReport);
+      const a11ySummary = await writeReport(reportData, args, printAccessibilityReport);
+      applyFailOn(a11ySummary, failOnThreshold);
       return;
     }
 
@@ -71,9 +86,19 @@ export async function main(argv) {
       findings,
     };
 
-    await writeReport(reportData, args, printTerminalReport, toJsonReport);
+    const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport);
+    applyFailOn(summary, failOnThreshold);
   } finally {
     await site.browser.close();
+  }
+}
+
+function applyFailOn(summary, threshold) {
+  if (!threshold) return;
+  if (shouldFail(summary, threshold)) {
+    const label = threshold.kind === "grade" ? `grade ${threshold.value}` : `score ${threshold.value}`;
+    logError(`Score ${summary.score}/100 (${summary.grade}) fails the --fail-on ${label} threshold.`);
+    process.exitCode = 1;
   }
 }
 
@@ -104,10 +129,12 @@ async function writeReport(reportData, args, printFn, toJsonFn) {
   } else {
     printFn(reportData);
   }
+
+  return jsonPayload.summary;
 }
 
 function parseArgs(argv) {
-  const args = { url: null, json: false, out: null, verbose: false, help: false, a11yReport: false, config: null };
+  const args = { url: null, json: false, out: null, verbose: false, help: false, a11yReport: false, config: null, failOn: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") args.json = true;
@@ -116,6 +143,7 @@ function parseArgs(argv) {
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--a11y-report") args.a11yReport = true;
     else if (arg === "--config") args.config = argv[++i];
+    else if (arg === "--fail-on") args.failOn = argv[++i];
     else if (!arg.startsWith("-") && !args.url) args.url = arg;
   }
   return args;

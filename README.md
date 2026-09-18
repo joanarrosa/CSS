@@ -59,6 +59,8 @@ css-audit <url>
 | `--json`          | Print a machine-readable JSON report instead of text     |
 | `--out <file>`    | Write the report to a file instead of stdout             |
 | `--a11y-report`   | Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit |
+| `--config <file>` | Ignore-rules config (default: `.css-auditrc.json` in the current directory) |
+| `--fail-on <val>` | Exit 1 if the result is worse than `<val>` — see "CI mode" below |
 | `--verbose`, `-v` | Print progress to stderr while it runs                   |
 | `--help`, `-h`    | Show usage                                                |
 
@@ -119,6 +121,29 @@ both reports. Applies automatically to the web UI too (it reads the same
 `.css-auditrc.json` from wherever you ran `npm run serve`) — no restart
 needed after editing it. The report always says how many findings were
 hidden, so filtering is never silent.
+
+#### CI mode
+
+```bash
+node bin/css-audit.js https://your-site.com --fail-on B
+```
+
+`--fail-on <value>` makes css-audit exit with code 1 when the result is
+worse than `<value>`, and 0 otherwise — no output parsing needed to gate
+a pipeline. `<value>` is either:
+
+- a **letter grade** (`A`-`F`) — fails if the actual grade is worse (e.g.
+  `--fail-on B` fails on C/D/F, passes on A/B);
+- a **number 0-100** — fails if the score is strictly below it (e.g.
+  `--fail-on 70` fails at 69, passes at 70).
+
+Works identically for `--a11y-report` too, since both reports share the
+same 0-100 score. An invalid `--fail-on` value exits 2 with an error
+message, before the page is even loaded.
+
+See [`examples/github-action.yml`](examples/github-action.yml) for a
+copy-pasteable GitHub Action that runs css-audit against your site on
+every push/PR and fails the check if it regresses.
 
 ### Web UI
 
