@@ -1,2 +1,4 @@
 node_modules/
 *.log
+release/
+electron/.icon-ico/

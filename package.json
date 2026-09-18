@@ -3,18 +3,42 @@
   "version": "1.0.0",
   "description": "Fetch a page, collect all the CSS it uses, and report duplicates, overridden rules, specificity issues, unused CSS, best-practice violations, accessibility contrast failures, and performance concerns.",
   "type": "module",
+  "main": "electron/main.js",
   "bin": {
     "css-audit": "./bin/css-audit.js",
     "css-audit-web": "./bin/css-audit-web.js"
   },
   "scripts": {
     "start": "node bin/css-audit.js",
-    "serve": "node bin/css-audit-web.js"
+    "serve": "node bin/css-audit-web.js",
+    "app": "electron .",
+    "dist:win": "electron-builder --win portable"
   },
   "license": "MIT",
   "dependencies": {
     "axe-core": "^4.13.0",
     "css-tree": "^2.3.1",
     "playwright": "^1.47.0"
+  },
+  "devDependencies": {
+    "electron": "^44.4.2",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.cssaudit.desktop",
+    "productName": "CSS Audit",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["portable"],
+      "icon": "electron/icon.png"
+    }
   }
 }
