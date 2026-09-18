@@ -77,7 +77,7 @@ async function handleAnalyze(req, res) {
       return sendJson(res, 422, { error: err.message });
     }
     logError(err.stack || err.message);
-    return sendJson(res, 500, { error: "Unexpected error while loading the page." });
+    return sendJson(res, 500, { error: `Unexpected error while loading the page: ${err.message}` });
   }
 
   try {
@@ -94,7 +94,7 @@ async function handleAnalyze(req, res) {
     sendJson(res, 200, report);
   } catch (err) {
     logError(err.stack || err.message);
-    sendJson(res, 500, { error: "Unexpected error while analyzing CSS." });
+    sendJson(res, 500, { error: `Unexpected error while analyzing CSS: ${err.message}` });
   } finally {
     await site.browser.close();
   }

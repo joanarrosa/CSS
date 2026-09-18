@@ -34,10 +34,19 @@ export async function collectSite(url, { verbose = false } = {}) {
     });
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.CSS_AUDIT_CHROMIUM_PATH || undefined,
-  });
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      executablePath: process.env.CSS_AUDIT_CHROMIUM_PATH || undefined,
+    });
+  } catch (err) {
+    throw new FetchError(
+      `Could not launch the headless browser Playwright needs: ${err.message}\n` +
+        `This usually means the Chromium binary didn't download during "npm install". Try running: npx playwright install chromium`,
+      { code: "BROWSER_LAUNCH_FAILED" }
+    );
+  }
   const context = await browser.newContext({
     userAgent:
       "Mozilla/5.0 (compatible; css-audit/1.0; +https://github.com/) CSSAuditBot",
