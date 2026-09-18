@@ -1,0 +1,105 @@
+.title {
+  color: #222222;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+.title {
+  color: #333333;
+}
+
+.subtitle {
+  color: #333;
+}
+.low-contrast {
+  color: #aaaaaa;
+  background: #ffffff;
+}
+
+#hero .title {
+  color: blue;
+}
+
+.nav-link {
+  color: #0000ff;
+  text-decoration: none;
+}
+.nav-link {
+  color: #0000ff;
+  text-decoration: none;
+}
+
+.card h2 {
+  color: green;
+}
+
+.body-text {
+  color: #444444;
+  font-size: 1rem;
+}
+.card p.body-text {
+  color: #444444;
+  font-size: 16px;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+}
+.btn-primary {
+  background: #007bff;
+  color: #ffffff;
+}
+.btn.btn-primary.btn-primary.btn-large.extra {
+  color: red;
+}
+
+.unused-selector-1 {
+  color: #444444;
+}
+.unused-selector-2 {
+  color: #444444;
+}
+.doesnt-exist-anywhere {
+  display: none;
+}
+
+div#hero#hero {
+  color: red;
+}
+
+.grid {
+  display: grid;
+}
+.grid--wide {
+  width: 100%;
+}
+.grid--featured {
+  border: 1px solid #000000;
+}
+.grid--home {
+  padding: 10px;
+}
+.grid--v2 {
+  margin: 10px;
+}
+
+body main section.card div.unused-thing span.nested.deep {
+  color: red;
+}
+.unused-thing-typo {
+  color: #444444;
+}
+
+.card {
+  -webkit-transform: scale(1);
+}
+
+.z-fix {
+  z-index: 99999;
+}

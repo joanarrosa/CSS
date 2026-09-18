@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CSS Audit Fixture</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .banner { color: #ff0000; padding: 10px; }
+    .banner { background: yellow; }
+    #hero { font-size: 32px !important; }
+  </style>
+</head>
+<body>
+  <header id="hero" class="hero">
+    <h1 class="title">Welcome</h1>
+    <p class="subtitle low-contrast">Barely readable subtitle text</p>
+  </header>
+
+  <div class="banner">This is a banner</div>
+
+  <nav class="site-nav">
+    <ul>
+      <li><a href="#" class="nav-link">Home</a></li>
+      <li><a href="#" class="nav-link">About</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section class="card">
+      <h2 style="color: purple; font-size: 20px;">Inline styled heading</h2>
+      <p class="body-text">Some paragraph text with normal contrast that should pass WCAG AA easily against a white background.</p>
+      <span class="error">Something went wrong</span>
+      <button class="btn btn-primary">Click me</button>
+      <div class="unused-thing">This div has a class not referenced correctly below (typo in CSS)</div>
+    </section>
+
+    <section class="grid grid--wide grid--featured grid--home grid--v2">
+      <div class="grid-item">Item</div>
+    </section>
+  </main>
+</body>
+</html>
