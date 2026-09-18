@@ -1,9 +1,9 @@
 # css-audit
 
-A CLI, local web UI, and Windows desktop app that loads a page in headless
-Chromium, collects every bit of CSS it actually uses (linked stylesheets,
-`<style>` blocks, inline `style=""` attributes, and anything injected by
-JavaScript), and reports:
+A CLI (and optional local web UI) that loads a page in headless Chromium,
+collects every bit of CSS it actually uses (linked stylesheets, `<style>`
+blocks, inline `style=""` attributes, and anything injected by JavaScript),
+and reports:
 
 - **Duplicates** — identical selectors defined more than once, and
   identical `property: value` pairs repeated across many selectors.
@@ -124,35 +124,6 @@ other, and switching tabs doesn't lose either report:
     axe's own fix guidance, the WCAG tags it maps to, and a link to that
     rule's documentation. "Already passing" lists what the page already
     gets right. Also has its own **Download JSON**.
-
-### Desktop app (Windows)
-
-For zero terminal/Node.js/npm involvement: a double-click desktop app,
-built with Electron, that wraps the exact same server and UI as above.
-
-**Using it:** run the `.exe` (it's portable — no installer, no admin
-rights). A window opens showing the same CSS Audit / Accessibility tabs.
-Close the window to quit; there's no separate server process to manage.
-The very first launch downloads Chromium (~150 MB, one-time, needs
-internet) with a progress screen; every launch after that is instant.
-Since the app isn't code-signed, Windows SmartScreen will likely warn
-"Windows protected your PC" on first run — click **More info → Run
-anyway**. That warning is expected for an unsigned indie app, not a sign
-anything is wrong.
-
-**Building it yourself** (needs Node.js + `npm install` as above):
-
-```bash
-npm run app         # launch it directly with Electron, for development
-npm run dist:win     # build release/CSS Audit <version>.exe (portable, x64)
-```
-
-`electron/main.js` is the whole desktop wrapper: it starts `src/server.js`
-in-process, checks whether Playwright's Chromium is installed and
-downloads it if not (via Electron's bundled Node, so no PowerShell/`npx`
-execution-policy issues), then opens a `BrowserWindow` pointed at the
-local server. Everything else — analysis, filters, both tabs — is the
-identical code the web UI and CLI use.
 
 ## How it works
 
