@@ -68,8 +68,13 @@ css-audit <url>
 node bin/css-audit.js https://example.com --verbose
 ```
 
-Terminal output is grouped by category, with a summary (counts per category
-+ top 3 priority fixes) at the top. Each finding includes the selector, the
+Terminal output leads with an overall **0-100 score and letter grade**
+(A-F) — a quick "is this getting better or worse" number derived from a
+weighted count of findings (errors weigh more than improvements; high
+severity weighs more than low) — then a summary (counts per category +
+top 3 priority fixes). The accessibility report (`--a11y-report`) gets
+its own score the same way, weighted by violation impact. Each finding
+includes the selector, the
 source file/`<style>` block (and line number when available), what's wrong,
 and a concrete suggested fix.
 
@@ -176,3 +181,17 @@ changes:
 cd test-fixtures && python3 -m http.server 8934 &
 node ../bin/css-audit.js http://localhost:8934/index.html
 ```
+
+## Tests
+
+```bash
+npm test
+```
+
+Unit tests (Node's built-in `node:test`, no extra dependency) for the
+parser, specificity/contrast math, the score curve, and every analyzer
+that doesn't need a live browser — including `overrides.js` and
+`unused.js`, exercised with hand-built DOM-match fixtures rather than a
+real page. `collect.js`/`domMatch.js`/`accessibility.js`/`axeAudit.js`
+aren't unit tested (they need a real Chromium + DOM), but are covered by
+the manual fixture-site smoke test above.

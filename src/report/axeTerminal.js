@@ -7,6 +7,14 @@ const IMPACT_BADGE = {
   minor: () => color.gray("[MINOR]"),
 };
 
+const GRADE_COLOR = {
+  A: "green",
+  B: "green",
+  C: "yellow",
+  D: "yellow",
+  F: "red",
+};
+
 export function printAccessibilityReport({ url, finalUrl, title, warnings, summary, violations, incomplete, passes }) {
   const lines = [];
 
@@ -23,6 +31,7 @@ export function printAccessibilityReport({ url, finalUrl, title, warnings, summa
   }
 
   lines.push(color.bold("Summary"));
+  lines.push(`  ${color.bold(color[GRADE_COLOR[summary.grade]](`Score: ${summary.score}/100 (${summary.grade})`))}`);
   lines.push(
     `  ${color.red(`${summary.violations} violations (need to fix)`)}   ${color.yellow(
       `${summary.incomplete} incomplete (needs manual review)`

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { scoreFromPenalty } from "./utils/score.js";
 
 const require = createRequire(import.meta.url);
 const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -26,6 +27,8 @@ export async function runAxeAudit(page) {
 }
 
 const IMPACT_ORDER = { critical: 4, serious: 3, moderate: 2, minor: 1 };
+const VIOLATION_PENALTY = { critical: 10, serious: 6, moderate: 3, minor: 1 };
+const INCOMPLETE_PENALTY_FACTOR = 0.5; // needs manual review, not a confirmed failure
 
 /**
  * Transforms axe-core's raw output into a compact, UI-friendly shape:
@@ -46,8 +49,15 @@ export function toAccessibilityReport(rawResults) {
     if (byImpact[v.impact] !== undefined) byImpact[v.impact]++;
   }
 
+  const penalty =
+    violations.reduce((sum, v) => sum + (VIOLATION_PENALTY[v.impact] ?? VIOLATION_PENALTY.minor), 0) +
+    incomplete.reduce((sum, v) => sum + (VIOLATION_PENALTY[v.impact] ?? VIOLATION_PENALTY.minor) * INCOMPLETE_PENALTY_FACTOR, 0);
+  const { score, grade } = scoreFromPenalty(penalty);
+
   return {
     summary: {
+      score,
+      grade,
       violations: violations.length,
       incomplete: incomplete.length,
       passes: passes.length,

@@ -1,4 +1,5 @@
 import { SEVERITY_WEIGHT } from "../utils/finding.js";
+import { scoreFromPenalty } from "../utils/score.js";
 
 export const CATEGORY_ORDER = [
   "duplicates",
@@ -37,6 +38,23 @@ export const CATEGORY_DESCRIPTIONS = {
     "Stylesheet size, render-blocking loads, and selector counts that can delay first paint or slow down style recalculation.",
 };
 
+// Penalty per finding, by type+severity. Errors weigh more than improvements
+// at the same severity, matching the error/improvement framing elsewhere.
+const PENALTY = {
+  error: { high: 10, medium: 5, low: 2 },
+  improvement: { high: 4, medium: 2, low: 0.5 },
+};
+
+/**
+ * A single 0-100 "health" number, and a letter grade (see scoreFromPenalty
+ * for the curve). A handful of high-severity errors drops it fast; a long
+ * tail of low-severity improvements drags it down slowly.
+ */
+export function computeScore(findings) {
+  const penalty = findings.reduce((sum, f) => sum + (PENALTY[f.type]?.[f.severity] ?? PENALTY.improvement.low), 0);
+  return scoreFromPenalty(penalty);
+}
+
 export function buildSummary(findings) {
   const counts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0]));
   for (const f of findings) {
@@ -70,5 +88,7 @@ export function buildSummary(findings) {
   const byType = { error: 0, improvement: 0 };
   for (const f of findings) byType[f.type] = (byType[f.type] || 0) + 1;
 
-  return { total, counts, bySeverity, byType, topFixes };
+  const { score, grade } = computeScore(findings);
+
+  return { total, counts, bySeverity, byType, topFixes, score, grade };
 }

@@ -160,14 +160,17 @@ function renderSummary(data) {
   summaryCard.className = "summary-card";
   summaryCard.innerHTML = `
     <div class="summary-header">
-      <div>
-        <h2>${escapeHtml(data.title || data.url)}</h2>
-        <div class="meta">${escapeHtml(data.url)}${
+      <div class="summary-title-row">
+        ${scoreBadgeHtml(data.summary)}
+        <div>
+          <h2>${escapeHtml(data.title || data.url)}</h2>
+          <div class="meta">${escapeHtml(data.url)}${
     data.finalUrl && data.finalUrl !== data.url ? " → " + escapeHtml(data.finalUrl) : ""
   }</div>
-        <div class="meta">${data.stats.totalRules} rules across ${data.stats.totalSources} source(s)${
+          <div class="meta">${data.stats.totalRules} rules across ${data.stats.totalSources} source(s)${
     data.httpStatus ? `, HTTP ${data.httpStatus}` : ""
   }</div>
+        </div>
       </div>
       <div class="severity-badges">
         <span class="badge badge--high">${data.summary.bySeverity.high || 0} high</span>
@@ -408,6 +411,16 @@ function escapeHtml(str) {
   );
 }
 
+function scoreBadgeHtml(summary) {
+  if (summary.score === undefined) return "";
+  return `
+    <div class="score-badge score-badge--${summary.grade}" title="Overall score: ${summary.score}/100">
+      <span class="score-badge-number">${summary.score}</span>
+      <span class="score-badge-grade">${summary.grade}</span>
+    </div>
+  `;
+}
+
 // --- Accessibility tab ---
 
 a11yReportBtn.addEventListener("click", async () => {
@@ -469,12 +482,15 @@ function renderAxeReport(data) {
   summaryCard.className = "summary-card";
   summaryCard.innerHTML = `
     <div class="summary-header">
-      <div>
-        <h2>${escapeHtml(data.title || data.url)}</h2>
-        <div class="meta">${escapeHtml(data.url)}${
+      <div class="summary-title-row">
+        ${scoreBadgeHtml(data.summary)}
+        <div>
+          <h2>${escapeHtml(data.title || data.url)}</h2>
+          <div class="meta">${escapeHtml(data.url)}${
     data.finalUrl && data.finalUrl !== data.url ? " → " + escapeHtml(data.finalUrl) : ""
   }</div>
-        <div class="meta">WCAG 2.1 A/AA + best-practice rules, via axe-core</div>
+          <div class="meta">WCAG 2.1 A/AA + best-practice rules, via axe-core</div>
+        </div>
       </div>
     </div>
     <div class="summary-actions">

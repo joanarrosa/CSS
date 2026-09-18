@@ -31,6 +31,8 @@ export function toJsonReport({ url, finalUrl, title, status, warnings, stats, fi
       CATEGORY_ORDER.map((c) => [c, { label: CATEGORY_LABELS[c], description: CATEGORY_DESCRIPTIONS[c] }])
     ),
     summary: {
+      score: summary.score,
+      grade: summary.grade,
       total: summary.total,
       bySeverity: summary.bySeverity,
       byType: summary.byType,

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildSummary, CATEGORY_ORDER } from "../src/report/summary.js";
+import { buildSummary, computeScore, CATEGORY_ORDER } from "../src/report/summary.js";
 import { makeFinding } from "../src/utils/finding.js";
 
 test("counts findings per category and severity", () => {
@@ -50,4 +50,35 @@ test("topFixes caps at 3 and de-duplicates by category+selector", () => {
   );
   const summary = buildSummary(findings);
   assert.equal(summary.topFixes.length, 1);
+});
+
+test("computeScore is 100 with no findings, grade A", () => {
+  const { score, grade } = computeScore([]);
+  assert.equal(score, 100);
+  assert.equal(grade, "A");
+});
+
+test("computeScore drops further for a high-severity error than an improvement of the same severity", () => {
+  const errorScore = computeScore([makeFinding({ category: "overrides", severity: "high", type: "error", message: "x" })]).score;
+  const improvementScore = computeScore([
+    makeFinding({ category: "best-practices", severity: "high", type: "improvement", message: "x" }),
+  ]).score;
+  assert.ok(errorScore < improvementScore);
+});
+
+test("computeScore never goes below 0 even with many severe findings", () => {
+  const findings = Array.from({ length: 200 }, () =>
+    makeFinding({ category: "overrides", severity: "high", type: "error", message: "x" })
+  );
+  const { score, grade } = computeScore(findings);
+  assert.ok(score >= 0);
+  assert.equal(grade, "F");
+});
+
+test("computeScore decreases monotonically as more findings are added", () => {
+  const one = computeScore([makeFinding({ category: "unused", severity: "low", type: "improvement", message: "x" })]).score;
+  const five = computeScore(
+    Array.from({ length: 5 }, () => makeFinding({ category: "unused", severity: "low", type: "improvement", message: "x" }))
+  ).score;
+  assert.ok(five <= one);
 });

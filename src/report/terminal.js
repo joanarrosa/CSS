@@ -12,6 +12,14 @@ const TYPE_BADGE = {
   improvement: () => color.cyan("IMPROVEMENT"),
 };
 
+const GRADE_COLOR = {
+  A: "green",
+  B: "green",
+  C: "yellow",
+  D: "yellow",
+  F: "red",
+};
+
 export function printTerminalReport({ url, finalUrl, title, status, warnings, stats, findings }) {
   const summary = buildSummary(findings);
   const lines = [];
@@ -37,6 +45,9 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
   }
 
   lines.push(color.bold("Summary"));
+  lines.push(
+    `  ${color.bold(color[GRADE_COLOR[summary.grade]](`Score: ${summary.score}/100 (${summary.grade})`))}`
+  );
   lines.push(
     `  ${color.red(`${summary.bySeverity.high || 0} high`)}  ${color.yellow(
       `${summary.bySeverity.medium || 0} medium`
