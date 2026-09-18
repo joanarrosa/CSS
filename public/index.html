@@ -19,6 +19,59 @@
     <button id="analyze-btn" type="submit">Analyze</button>
   </form>
 
+  <div class="a11y-toolbar">
+    <button id="a11y-guide-btn" type="button" class="secondary-btn">Accessibility Guide — How to improve</button>
+    <button id="a11y-report-btn" type="button" class="secondary-btn">Full Accessibility Report</button>
+  </div>
+
+  <div id="a11y-guide" class="a11y-guide" hidden>
+    <h2>Web accessibility, in short</h2>
+    <p>
+      Accessibility means people with disabilities — visual, auditory, motor, or cognitive — can
+      perceive, understand, navigate, and interact with a page, usually with the help of assistive
+      technology (screen readers, voice control, switch devices, magnification, keyboard-only
+      navigation). It's built on four principles, known by the acronym <strong>POUR</strong>:
+    </p>
+
+    <dl class="pour-list">
+      <dt>Perceivable</dt>
+      <dd>Content must be presentable in ways every user can perceive: text alternatives for images, captions/transcripts for audio and video, sufficient color contrast, and text that can be resized without breaking the layout.</dd>
+
+      <dt>Operable</dt>
+      <dd>Every interface element must be operable by any input method: full keyboard access with a visible focus indicator, no time limits that can't be extended, no content that flashes enough to trigger seizures, and clear ways to navigate (landmarks, skip links, descriptive headings).</dd>
+
+      <dt>Understandable</dt>
+      <dd>Information and interface behavior must be understandable: readable, predictable, consistent navigation, and clear labels plus helpful error messages on forms.</dd>
+
+      <dt>Robust</dt>
+      <dd>Content must work reliably across current and future browsers and assistive technologies — which in practice means valid, semantic HTML and correct ARIA usage, not just visual styling.</dd>
+    </dl>
+
+    <h3>A practical checklist</h3>
+    <ul class="checklist">
+      <li>Give every meaningful <code>&lt;img&gt;</code> a descriptive <code>alt</code> attribute (empty <code>alt=""</code> only for purely decorative images).</li>
+      <li>Label every form control with a visible <code>&lt;label&gt;</code>, <code>aria-label</code>, or <code>aria-labelledby</code>.</li>
+      <li>Never rely on color alone to convey meaning — pair it with text, an icon, or a pattern.</li>
+      <li>Meet WCAG AA contrast: at least 4.5:1 for normal text, 3:1 for large text.</li>
+      <li>Make every interactive element keyboard-reachable, with a visible focus style (don't remove <code>outline</code> without a replacement).</li>
+      <li>Use real, sequential heading levels (<code>h1</code>–<code>h6</code>) — don't skip levels or use headings just for visual size.</li>
+      <li>Structure pages with semantic landmarks (<code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>) instead of generic <code>&lt;div&gt;</code>s.</li>
+      <li>Give links and buttons descriptive, unique accessible names ("Read pricing details", not "Click here").</li>
+      <li>Set a <code>lang</code> attribute on <code>&lt;html&gt;</code> so assistive tech uses the right pronunciation.</li>
+      <li>Test with just a keyboard (Tab / Shift+Tab / Enter / Space), and ideally a screen reader too.</li>
+    </ul>
+
+    <p class="sources">
+      Sources &amp; further reading:
+      <a href="https://www.w3.org/WAI/fundamentals/accessibility-intro/" target="_blank" rel="noopener noreferrer">W3C WAI — Introduction to Web Accessibility</a>
+      ·
+      <a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility" target="_blank" rel="noopener noreferrer">MDN — Accessibility</a>
+    </p>
+  </div>
+
+  <div id="a11y-report-status" class="status" role="status"></div>
+  <div id="a11y-report"></div>
+
   <div id="status" class="status" role="status"></div>
   <div id="summary"></div>
   <div id="filter-bar" class="filter-bar"></div>

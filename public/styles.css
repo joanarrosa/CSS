@@ -16,6 +16,10 @@
   --error-bg: #fbeae9;
   --improvement: #1a5276;
   --improvement-bg: #e8f1f8;
+  --review: #8a5a00;
+  --review-bg: #fdf0d8;
+  --pass: #1e7d3a;
+  --pass-bg: #e7f6ec;
 }
 
 * {
@@ -82,6 +86,86 @@ body {
 .analyze-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.a11y-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.a11y-guide {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.a11y-guide h2 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.a11y-guide h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+
+.a11y-guide p {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.pour-list {
+  margin: 14px 0;
+}
+
+.pour-list dt {
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.pour-list dt:first-child {
+  margin-top: 0;
+}
+
+.pour-list dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.checklist {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.checklist li {
+  margin-bottom: 8px;
+  color: var(--text-dim);
+}
+
+.a11y-guide code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sources {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.sources a {
+  color: var(--accent);
 }
 
 .status {
@@ -195,6 +279,16 @@ body {
   color: var(--improvement);
 }
 
+.type-pill--review {
+  background: var(--review-bg);
+  color: var(--review);
+}
+
+.type-pill--pass {
+  background: var(--pass-bg);
+  color: var(--pass);
+}
+
 .type-hint {
   color: var(--text-dim);
   margin-right: 8px;
@@ -217,6 +311,31 @@ body {
 .type-badge--improvement {
   background: var(--improvement-bg);
   color: var(--improvement);
+}
+
+.type-badge--review {
+  background: var(--review-bg);
+  color: var(--review);
+}
+
+.type-badge--pass {
+  background: var(--pass-bg);
+  color: var(--pass);
+}
+
+.axe-node {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+
+.axe-node code {
+  background: var(--card-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-word;
 }
 
 .category-counts {

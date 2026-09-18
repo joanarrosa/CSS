@@ -34,9 +34,9 @@ and a concrete fix.
 npm install
 ```
 
-That's it — `npm install` pulls in `playwright` and `css-tree`, and
-Playwright's postinstall step downloads a matching Chromium build
-automatically.
+That's it — `npm install` pulls in `playwright`, `css-tree`, and
+`axe-core`, and Playwright's postinstall step downloads a matching
+Chromium build automatically.
 
 ## Usage
 
@@ -58,6 +58,7 @@ css-audit <url>
 | ----------------- | -------------------------------------------------------- |
 | `--json`          | Print a machine-readable JSON report instead of text     |
 | `--out <file>`    | Write the report to a file instead of stdout             |
+| `--a11y-report`   | Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit |
 | `--verbose`, `-v` | Print progress to stderr while it runs                   |
 | `--help`, `-h`    | Show usage                                                |
 
@@ -71,6 +72,18 @@ Terminal output is grouped by category, with a summary (counts per category
 + top 3 priority fixes) at the top. Each finding includes the selector, the
 source file/`<style>` block (and line number when available), what's wrong,
 and a concrete suggested fix.
+
+```bash
+node bin/css-audit.js https://example.com --a11y-report
+```
+
+Runs a full WCAG 2.1 A/AA + best-practice audit via
+[axe-core](https://github.com/dequelabs/axe-core) instead of the CSS audit,
+printing three sections: **violations** (need to fix, with the specific
+elements and axe's own fix guidance), **incomplete** (needs a human to
+verify — e.g. something only checkable by eye), and **passes** (rules the
+page already satisfies). Combine with `--json` for the machine-readable
+shape.
 
 ### Web UI
 
@@ -105,6 +118,24 @@ The web UI adds a few things beyond what the terminal report shows:
   as `--json`) to a file.
 - Your last-analyzed URL is remembered (browser `localStorage`) so you
   don't have to retype it.
+
+Two more buttons sit above the results, independent of the main CSS audit:
+
+- **Accessibility Guide — How to improve** — toggles a static panel
+  summarizing the WCAG POUR principles (Perceivable, Operable,
+  Understandable, Robust) and a practical checklist, with links to the
+  [W3C WAI introduction](https://www.w3.org/WAI/fundamentals/accessibility-intro/)
+  and [MDN's accessibility docs](https://developer.mozilla.org/en-US/docs/Web/Accessibility).
+- **Full Accessibility Report** — runs a real WCAG 2.1 A/AA audit via
+  [axe-core](https://github.com/dequelabs/axe-core) (the same engine behind
+  Chrome DevTools' Lighthouse and countless other a11y tools) against the
+  live rendered page — not just CSS contrast, but alt text, form labels,
+  ARIA usage, heading structure, landmarks, and more. Results are grouped
+  into **Violations** (need to fix, each with the specific offending
+  elements and a fix suggestion), **Needs manual review** (axe can't be
+  fully sure — needs a human check), and **Already passing** (what the
+  page already gets right) — i.e. exactly "what you have vs. what you
+  need," per rule, with a link to that rule's documentation.
 
 ## How it works
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { collectSite, FetchError } from "./collect.js";
 import { runFullAnalysis } from "./analyze/index.js";
 import { toJsonReport } from "./report/json.js";
+import { runAxeAudit, toAccessibilityReport } from "./axeAudit.js";
 import { info, error as logError } from "./utils/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,9 @@ export function createServer() {
       if (req.method === "POST" && req.url === "/api/analyze") {
         return await handleAnalyze(req, res);
       }
+      if (req.method === "POST" && req.url === "/api/accessibility-report") {
+        return await handleAccessibilityReport(req, res);
+      }
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("Not found");
     } catch (err) {
@@ -51,35 +55,50 @@ async function serveStatic(res, file, contentType) {
   }
 }
 
-async function handleAnalyze(req, res) {
+async function parseUrlFromBody(req, res) {
   let body;
   try {
     body = await readBody(req);
   } catch (err) {
-    return sendJson(res, 413, { error: err.message });
+    sendJson(res, 413, { error: err.message });
+    return null;
   }
 
   let url;
   try {
     ({ url } = JSON.parse(body));
   } catch {
-    return sendJson(res, 400, { error: 'Invalid JSON body — expected {"url": "..."}.' });
+    sendJson(res, 400, { error: 'Invalid JSON body — expected {"url": "..."}.' });
+    return null;
   }
   if (!url || typeof url !== "string") {
-    return sendJson(res, 400, { error: 'Missing "url" in request body.' });
+    sendJson(res, 400, { error: 'Missing "url" in request body.' });
+    return null;
   }
+  return url;
+}
 
-  let site;
+async function loadSite(url, res) {
   try {
-    info(`Analyzing ${url} ...`);
-    site = await collectSite(url, { verbose: false });
+    info(`Loading ${url} ...`);
+    return await collectSite(url, { verbose: false });
   } catch (err) {
     if (err instanceof FetchError) {
-      return sendJson(res, 422, { error: err.message });
+      sendJson(res, 422, { error: err.message });
+      return null;
     }
     logError(err.stack || err.message);
-    return sendJson(res, 500, { error: `Unexpected error while loading the page: ${err.message}` });
+    sendJson(res, 500, { error: `Unexpected error while loading the page: ${err.message}` });
+    return null;
   }
+}
+
+async function handleAnalyze(req, res) {
+  const url = await parseUrlFromBody(req, res);
+  if (url === null) return;
+
+  const site = await loadSite(url, res);
+  if (site === null) return;
 
   try {
     const { findings, stats } = await runFullAnalysis(site, { verbose: false });
@@ -96,6 +115,32 @@ async function handleAnalyze(req, res) {
   } catch (err) {
     logError(err.stack || err.message);
     sendJson(res, 500, { error: `Unexpected error while analyzing CSS: ${err.message}` });
+  } finally {
+    await site.browser.close();
+  }
+}
+
+async function handleAccessibilityReport(req, res) {
+  const url = await parseUrlFromBody(req, res);
+  if (url === null) return;
+
+  const site = await loadSite(url, res);
+  if (site === null) return;
+
+  try {
+    info(`Running accessibility audit for ${url} ...`);
+    const raw = await runAxeAudit(site.page);
+    const report = toAccessibilityReport(raw);
+    sendJson(res, 200, {
+      url: site.url,
+      finalUrl: site.finalUrl,
+      title: site.title,
+      warnings: site.warnings,
+      ...report,
+    });
+  } catch (err) {
+    logError(err.stack || err.message);
+    sendJson(res, 500, { error: `Unexpected error while running the accessibility audit: ${err.message}` });
   } finally {
     await site.browser.close();
   }

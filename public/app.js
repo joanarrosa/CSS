@@ -6,6 +6,12 @@ const summaryEl = document.getElementById("summary");
 const filterBarEl = document.getElementById("filter-bar");
 const resultsEl = document.getElementById("results");
 
+const a11yGuideBtn = document.getElementById("a11y-guide-btn");
+const a11yGuidePanel = document.getElementById("a11y-guide");
+const a11yReportBtn = document.getElementById("a11y-report-btn");
+const a11yReportStatusEl = document.getElementById("a11y-report-status");
+const a11yReportEl = document.getElementById("a11y-report");
+
 const CATEGORY_ORDER = [
   "duplicates",
   "overrides",
@@ -326,4 +332,181 @@ function escapeHtml(str) {
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
   );
+}
+
+// --- Accessibility Guide (static panel) ---
+
+a11yGuideBtn.addEventListener("click", () => {
+  a11yGuidePanel.hidden = !a11yGuidePanel.hidden;
+  if (!a11yGuidePanel.hidden) a11yGuidePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+// --- Full Accessibility Report (axe-core) ---
+
+const IMPACT_WEIGHT = { critical: 4, serious: 3, moderate: 2, minor: 1 };
+const IMPACT_LABELS = { critical: "Critical", serious: "Serious", moderate: "Moderate", minor: "Minor" };
+
+a11yReportBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
+  if (!url) {
+    a11yReportStatusEl.textContent = "Enter a URL above first.";
+    a11yReportStatusEl.className = "status status--error";
+    return;
+  }
+
+  rememberUrl(url);
+  a11yReportEl.innerHTML = "";
+  a11yReportBtn.disabled = true;
+  a11yReportBtn.textContent = "Running audit…";
+  a11yReportStatusEl.textContent = "Running a full WCAG 2.1 A/AA audit (axe-core) — this can take several seconds…";
+  a11yReportStatusEl.className = "status status--loading";
+
+  try {
+    const res = await fetch("/api/accessibility-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      a11yReportStatusEl.textContent = data.error || "Something went wrong.";
+      a11yReportStatusEl.className = "status status--error";
+      return;
+    }
+    a11yReportStatusEl.textContent = "";
+    a11yReportStatusEl.className = "status";
+    renderAxeReport(data);
+    a11yReportEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    a11yReportStatusEl.textContent = "Network error: " + err.message;
+    a11yReportStatusEl.className = "status status--error";
+  } finally {
+    a11yReportBtn.disabled = false;
+    a11yReportBtn.textContent = "Full Accessibility Report";
+  }
+});
+
+function renderAxeReport(data) {
+  a11yReportEl.innerHTML = "";
+
+  if (data.warnings && data.warnings.length) {
+    const warnBox = document.createElement("div");
+    warnBox.className = "warnings";
+    warnBox.innerHTML =
+      "<strong>Warnings</strong><ul>" +
+      data.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("") +
+      "</ul>";
+    a11yReportEl.appendChild(warnBox);
+  }
+
+  const summaryCard = document.createElement("div");
+  summaryCard.className = "summary-card";
+  summaryCard.innerHTML = `
+    <div class="summary-header">
+      <div>
+        <h2>Accessibility Report — ${escapeHtml(data.title || data.url)}</h2>
+        <div class="meta">${escapeHtml(data.url)}${
+    data.finalUrl && data.finalUrl !== data.url ? " → " + escapeHtml(data.finalUrl) : ""
+  }</div>
+        <div class="meta">WCAG 2.1 A/AA + best-practice rules, via axe-core</div>
+      </div>
+    </div>
+    <div class="type-row">
+      <span class="type-pill type-pill--error">${data.summary.violations} need to fix</span>
+      <span class="type-pill type-pill--review">${data.summary.incomplete} need manual review</span>
+      <span class="type-pill type-pill--pass">${data.summary.passes} already passing</span>
+    </div>
+    <div class="category-counts">
+      ${Object.entries(data.summary.byImpact)
+        .filter(([, n]) => n > 0)
+        .map(([impact, n]) => `<div class="count-pill"><span>${IMPACT_LABELS[impact]}</span><strong>${n}</strong></div>`)
+        .join("")}
+    </div>
+  `;
+  a11yReportEl.appendChild(summaryCard);
+
+  if (data.violations.length) {
+    a11yReportEl.appendChild(renderAxeSection("Violations — need to fix", data.violations, "violation"));
+  }
+  if (data.incomplete.length) {
+    a11yReportEl.appendChild(renderAxeSection("Needs manual review", data.incomplete, "review"));
+  }
+  if (data.passes.length) {
+    a11yReportEl.appendChild(renderAxePassSection(data.passes));
+  }
+}
+
+function renderAxeSection(title, rules, kind) {
+  const sorted = [...rules].sort((a, b) => (IMPACT_WEIGHT[b.impact] || 0) - (IMPACT_WEIGHT[a.impact] || 0));
+
+  const section = document.createElement("details");
+  section.className = "category-section";
+  section.open = true;
+
+  const summary = document.createElement("summary");
+  summary.textContent = `${title} (${rules.length})`;
+  section.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.className = "finding-list";
+  for (const rule of sorted) {
+    const card = document.createElement("div");
+    card.className = `finding finding--${rule.impact || "low"}`;
+    card.innerHTML = `
+      <div class="finding-header">
+        ${rule.impact ? `<span class="sev-badge sev-badge--${impactToSeverity(rule.impact)}">${rule.impact}</span>` : ""}
+        <span class="type-badge type-badge--${kind === "violation" ? "error" : "improvement"}">${escapeHtml(rule.id)}</span>
+        <strong>${escapeHtml(rule.help)}</strong>
+      </div>
+      <p class="problem">${escapeHtml(rule.description)}</p>
+      ${rule.tags.length ? `<p class="where"><strong>WCAG:</strong> ${rule.tags.map(escapeHtml).join(", ")}</p>` : ""}
+      ${rule.nodes.map((n) => renderAxeNode(n)).join("")}
+      <p class="fix"><a href="${escapeHtml(rule.helpUrl)}" target="_blank" rel="noopener noreferrer">Learn more →</a></p>
+    `;
+    list.appendChild(card);
+  }
+  section.appendChild(list);
+  return section;
+}
+
+function renderAxeNode(node) {
+  return `
+    <div class="axe-node">
+      <p class="where"><strong>Where:</strong> <code>${escapeHtml(node.target)}</code></p>
+      <p class="where"><strong>Element:</strong> <code>${escapeHtml(node.html)}</code></p>
+      ${node.failureSummary ? `<p class="fix"><strong>Fix:</strong> ${escapeHtml(node.failureSummary)}</p>` : ""}
+    </div>
+  `;
+}
+
+function renderAxePassSection(passes) {
+  const section = document.createElement("details");
+  section.className = "category-section";
+
+  const summary = document.createElement("summary");
+  summary.textContent = `Already passing (${passes.length})`;
+  section.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.className = "finding-list";
+  list.innerHTML = passes
+    .map(
+      (rule) => `
+      <div class="finding">
+        <div class="finding-header">
+          <span class="type-badge type-badge--pass">pass</span>
+          <strong>${escapeHtml(rule.help)}</strong>
+          <span class="loc">${rule.nodeCount} element${rule.nodeCount !== 1 ? "s" : ""}</span>
+        </div>
+      </div>`
+    )
+    .join("");
+  section.appendChild(list);
+  return section;
+}
+
+function impactToSeverity(impact) {
+  if (impact === "critical" || impact === "serious") return "high";
+  if (impact === "moderate") return "medium";
+  return "low";
 }
