@@ -57,7 +57,8 @@ css-audit <url>
 | Flag              | Description                                             |
 | ----------------- | -------------------------------------------------------- |
 | `--json`          | Print a machine-readable JSON report instead of text     |
-| `--out <file>`    | Write the report to a file instead of stdout             |
+| `--html`          | Write a single, self-contained HTML report (styled like the web UI) instead of text |
+| `--out <file>`    | Write the report to a file (default filename with `--html`) instead of stdout |
 | `--a11y-report`   | Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit |
 | `--config <file>` | Ignore-rules config (default: `.css-auditrc.json` in the current directory) |
 | `--fail-on <val>` | Exit 1 if the result is worse than `<val>` — see "CI mode" below |
@@ -168,8 +169,9 @@ other, and switching tabs doesn't lose either report:
   - **Error vs. Improvement** — every finding is badged as one or the other
     (Error = objectively broken; Improvement = works today, worth
     polishing), with counts broken out in the summary.
-  - **Category tips**, **Where/Problem/Fix** labels, **Download JSON**,
-    and a remembered last URL (`localStorage`) — as before.
+  - **Category tips**, **Where/Problem/Fix** labels, **Download JSON**/
+    **Download HTML**, and a remembered last URL (`localStorage`) — as
+    before.
 - **Accessibility tab** — a real WCAG 2.1 A/AA audit via
   [axe-core](https://github.com/dequelabs/axe-core) (the engine behind
   Chrome DevTools' Lighthouse) against the live rendered page: alt text,
@@ -183,7 +185,15 @@ other, and switching tabs doesn't lose either report:
   - Each violation/incomplete item shows the specific offending element(s),
     axe's own fix guidance, the WCAG tags it maps to, and a link to that
     rule's documentation. "Already passing" lists what the page already
-    gets right. Also has its own **Download JSON**.
+    gets right. Also has its own **Download JSON** and **Download HTML**.
+
+**Download HTML** (either tab) saves a single file that looks and behaves
+exactly like the page you're looking at — same filters, same score badge
+— but with the data baked in, so it opens with zero setup (no server, no
+`npm install`, works offline) by double-clicking it. It's the same output
+`--html` produces on the CLI. Good for sharing a snapshot with someone
+who doesn't have css-audit installed, or archiving a report from a
+one-off audit.
 
 ## How it works
 

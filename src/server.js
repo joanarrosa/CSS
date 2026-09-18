@@ -7,6 +7,7 @@ import { runFullAnalysis } from "./analyze/index.js";
 import { toJsonReport } from "./report/json.js";
 import { runAxeAudit, toAccessibilityReport } from "./axeAudit.js";
 import { loadConfig, warnIfConfigProblem } from "./config.js";
+import { buildHtmlReport } from "./report/html.js";
 import { info, error as logError } from "./utils/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,9 @@ export function createServer() {
       }
       if (req.method === "POST" && req.url === "/api/accessibility-report") {
         return await handleAccessibilityReport(req, res);
+      }
+      if (req.method === "POST" && req.url === "/api/export-html") {
+        return await handleExportHtml(req, res);
       }
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("Not found");
@@ -119,6 +123,43 @@ async function handleAnalyze(req, res) {
     sendJson(res, 500, { error: `Unexpected error while analyzing CSS: ${err.message}` });
   } finally {
     await site.browser.close();
+  }
+}
+
+async function handleExportHtml(req, res) {
+  let body;
+  try {
+    body = await readBody(req);
+  } catch (err) {
+    return sendJson(res, 413, { error: err.message });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return sendJson(res, 400, { error: "Invalid JSON body." });
+  }
+
+  const { kind, data } = payload;
+  if (kind !== "css" && kind !== "a11y") {
+    return sendJson(res, 400, { error: 'Missing or invalid "kind" — expected "css" or "a11y".' });
+  }
+  if (!data || typeof data !== "object") {
+    return sendJson(res, 400, { error: 'Missing "data" (the already-fetched report to export).' });
+  }
+
+  try {
+    const html = buildHtmlReport(kind, data);
+    const filename = kind === "a11y" ? "accessibility-report.html" : "css-audit-report.html";
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    });
+    res.end(html);
+  } catch (err) {
+    logError(err.stack || err.message);
+    sendJson(res, 500, { error: `Could not build the HTML report: ${err.message}` });
   }
 }
 

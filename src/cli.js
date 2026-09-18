@@ -6,6 +6,7 @@ import { runAxeAudit, toAccessibilityReport } from "./axeAudit.js";
 import { printAccessibilityReport } from "./report/axeTerminal.js";
 import { loadConfig, warnIfConfigProblem } from "./config.js";
 import { parseFailOn, shouldFail } from "./utils/failOn.js";
+import { buildHtmlReport } from "./report/html.js";
 import { error as logError, info } from "./utils/logger.js";
 
 const HELP = `css-audit — analyze the CSS a page actually uses
@@ -15,7 +16,9 @@ Usage:
 
 Options:
   --json           Output a machine-readable JSON report instead of the terminal report
-  --out <file>     Write the report to a file instead of stdout
+  --html           Write a single, self-contained HTML report (styled like the web UI, no
+                    server needed to view it) instead of printing to the terminal
+  --out <file>     Write the report to a file instead of stdout (default filename with --html)
   --a11y-report    Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit
   --config <file>  Ignore-rules config (default: .css-auditrc.json in the current directory, if present)
   --fail-on <val>  Exit with code 1 if the result is worse than <val>: a letter grade (A-F,
@@ -69,7 +72,7 @@ export async function main(argv) {
         warnings: site.warnings,
         ...a11yReport,
       };
-      const a11ySummary = await writeReport(reportData, args, printAccessibilityReport);
+      const a11ySummary = await writeReport(reportData, args, printAccessibilityReport, null, "a11y");
       applyFailOn(a11ySummary, failOnThreshold);
       return;
     }
@@ -86,7 +89,7 @@ export async function main(argv) {
       findings,
     };
 
-    const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport);
+    const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport, "css");
     applyFailOn(summary, failOnThreshold);
   } finally {
     await site.browser.close();
@@ -102,8 +105,18 @@ function applyFailOn(summary, threshold) {
   }
 }
 
-async function writeReport(reportData, args, printFn, toJsonFn) {
+async function writeReport(reportData, args, printFn, toJsonFn, kind) {
   const jsonPayload = toJsonFn ? toJsonFn(reportData) : reportData;
+
+  if (args.html) {
+    const fs = await import("node:fs/promises");
+    const outPath = args.out || (kind === "a11y" ? "accessibility-report.html" : "css-audit-report.html");
+    const htmlContent = buildHtmlReport(kind, jsonPayload);
+    await fs.writeFile(outPath, htmlContent, "utf8");
+    info(`HTML report written to ${outPath}`);
+    return jsonPayload.summary;
+  }
+
   const output = args.json ? JSON.stringify(jsonPayload, null, 2) : null;
 
   if (args.out) {
@@ -134,10 +147,21 @@ async function writeReport(reportData, args, printFn, toJsonFn) {
 }
 
 function parseArgs(argv) {
-  const args = { url: null, json: false, out: null, verbose: false, help: false, a11yReport: false, config: null, failOn: null };
+  const args = {
+    url: null,
+    json: false,
+    html: false,
+    out: null,
+    verbose: false,
+    help: false,
+    a11yReport: false,
+    config: null,
+    failOn: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") args.json = true;
+    else if (arg === "--html") args.html = true;
     else if (arg === "--verbose" || arg === "-v") args.verbose = true;
     else if (arg === "--out") args.out = argv[++i];
     else if (arg === "--help" || arg === "-h") args.help = true;
