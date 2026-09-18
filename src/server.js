@@ -17,6 +17,7 @@ const STATIC_FILES = {
   "/index.html": { file: "index.html", contentType: "text/html; charset=utf-8" },
   "/app.js": { file: "app.js", contentType: "application/javascript; charset=utf-8" },
   "/styles.css": { file: "styles.css", contentType: "text/css; charset=utf-8" },
+  "/favicon.svg": { file: "favicon.svg", contentType: "image/svg+xml" },
 };
 
 export function createServer() {

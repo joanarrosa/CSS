@@ -6,6 +6,8 @@ let counter = 0;
  * @param {object} f
  * @param {string} f.category one of: duplicates, overrides, specificity, unused, best-practices, accessibility, performance
  * @param {'high'|'medium'|'low'} f.severity
+ * @param {'error'|'improvement'} f.type 'error' = objectively broken/wrong (dead code, invalid CSS, WCAG failure);
+ *   'improvement' = works fine today but a maintainability/style/robustness suggestion
  * @param {string} f.selector the selector/rule involved
  * @param {string} f.source file/<style> block label
  * @param {number|null} [f.line]
@@ -18,6 +20,7 @@ export function makeFinding(f) {
     id: `f${counter++}`,
     category: f.category,
     severity: f.severity || "medium",
+    type: f.type || "improvement",
     selector: f.selector || null,
     source: f.source || null,
     line: f.line ?? null,

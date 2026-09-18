@@ -90,6 +90,7 @@ function parseErrorFindings(parseErrors) {
     makeFinding({
       category: "best-practices",
       severity: "medium",
+      type: "error",
       selector: null,
       source: e.source,
       line: e.line,

@@ -29,6 +29,7 @@ export function analyzeUnused(domResult) {
       makeFinding({
         category: "unused",
         severity: isDynamic || isPseudoEl ? "low" : "medium",
+        type: "improvement",
         selector: rule.selector,
         source: rule.source,
         line: rule.line,
@@ -49,6 +50,7 @@ export function analyzeUnused(domResult) {
       makeFinding({
         category: "unused",
         severity: "low",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
@@ -63,6 +65,7 @@ export function analyzeUnused(domResult) {
       makeFinding({
         category: "unused",
         severity: unusedCount > checkedCount * 0.3 ? "high" : "medium",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,

@@ -7,6 +7,11 @@ const SEVERITY_BADGE = {
   low: (s) => color.gray(`[${s.toUpperCase()}]`),
 };
 
+const TYPE_BADGE = {
+  error: () => color.red("ERROR"),
+  improvement: () => color.cyan("IMPROVEMENT"),
+};
+
 export function printTerminalReport({ url, finalUrl, title, status, warnings, stats, findings }) {
   const summary = buildSummary(findings);
   const lines = [];
@@ -37,6 +42,11 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
       `${summary.bySeverity.medium || 0} medium`
     )}  ${color.gray(`${summary.bySeverity.low || 0} low`)}  ${color.bold(`(${summary.total} total)`)}`
   );
+  lines.push(
+    `  ${color.red(`${summary.byType.error || 0} errors`)} (objectively broken)  ${color.cyan(
+      `${summary.byType.improvement || 0} improvements`
+    )} (works, but could be better)`
+  );
   for (const cat of CATEGORY_ORDER) {
     const n = summary.counts[cat] || 0;
     lines.push(`  ${padLabel(CATEGORY_LABELS[cat])} ${n}`);
@@ -46,7 +56,11 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
   if (summary.topFixes.length) {
     lines.push(color.bold("Top priority fixes"));
     summary.topFixes.forEach((f, i) => {
-      lines.push(`  ${i + 1}. ${SEVERITY_BADGE[f.severity](f.severity)} ${color.bold(CATEGORY_LABELS[f.category])} — ${f.message}`);
+      lines.push(
+        `  ${i + 1}. ${SEVERITY_BADGE[f.severity](f.severity)} ${TYPE_BADGE[f.type](f.type)} ${color.bold(
+          CATEGORY_LABELS[f.category]
+        )} — ${f.message}`
+      );
       if (f.suggestion) lines.push(`     ${color.dim("Fix:")} ${f.suggestion}`);
     });
     lines.push("");
@@ -59,8 +73,13 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
     lines.push(color.dim("-".repeat(60)));
     for (const f of catFindings) {
       const badge = SEVERITY_BADGE[f.severity](f.severity);
+      const typeBadge = TYPE_BADGE[f.type](f.type);
       const loc = formatLocation(f);
-      lines.push(`  ${badge} ${f.selector ? color.bold(f.selector) : color.dim("(document-level)")}${loc ? color.dim(`  ${loc}`) : ""}`);
+      lines.push(
+        `  ${badge} ${typeBadge} ${f.selector ? color.bold(f.selector) : color.dim("(document-level)")}${
+          loc ? color.dim(`  ${loc}`) : ""
+        }`
+      );
       lines.push(`      ${f.message}`);
       if (f.suggestion) lines.push(`      ${color.green("Fix:")} ${f.suggestion}`);
       lines.push("");

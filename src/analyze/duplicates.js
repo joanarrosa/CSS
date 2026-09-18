@@ -39,6 +39,7 @@ export function analyzeDuplicates(rules) {
       makeFinding({
         category: "duplicates",
         severity: conflicting.length > 0 ? "high" : "medium",
+        type: conflicting.length > 0 ? "error" : "improvement",
         selector,
         source: occurrences[occurrences.length - 1].source,
         line: occurrences[occurrences.length - 1].line,
@@ -73,6 +74,7 @@ export function analyzeDuplicates(rules) {
       makeFinding({
         category: "duplicates",
         severity: "low",
+        type: "improvement",
         selector: uniqueSelectors.slice(0, 6).join(", ") + (uniqueSelectors.length > 6 ? ", ..." : ""),
         source: null,
         line: null,

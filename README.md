@@ -22,6 +22,12 @@ and reports:
 - **Performance** — oversized stylesheets, render-blocking stylesheets,
   excessive selector counts.
 
+Every finding is tagged **Error** (objectively broken — dead code, invalid
+CSS, a WCAG contrast failure) or **Improvement** (works today, but a
+maintainability/style suggestion), and includes exactly where it came from
+(source file/`<style>` block + line number, when available), what's wrong,
+and a concrete fix.
+
 ## Setup
 
 ```bash
@@ -81,6 +87,24 @@ top-3-fixes as the CLI — served locally with no external dependencies beyond
 what `npm install` already pulled in (the UI is plain HTML/CSS/JS in
 `public/`, served by a small `node:http` server in `src/server.js` that
 reuses the exact same analysis engine as the CLI).
+
+The web UI adds a few things beyond what the terminal report shows:
+
+- **Filters** — click a category chip (Duplicates, Overrides, …) and/or a
+  type chip (Errors / Improvements) to narrow the results; both filters
+  combine (e.g. "Overrides" + "Errors" shows only overrides that are
+  objective bugs).
+- **Error vs. Improvement** — every finding is badged as one or the other
+  (see above), and the summary breaks out counts for each, so you can
+  triage "what's actually broken" separately from "what's worth polishing."
+- **Category tips** — each section opens with a one-line explanation of
+  what that category checks and why it matters.
+- **Clear location labels** — every finding shows *Where* (file/line),
+  *Problem*, and *Fix* as distinct labeled lines.
+- **Download JSON report** — one click saves the full report (same shape
+  as `--json`) to a file.
+- Your last-analyzed URL is remembered (browser `localStorage`) so you
+  don't have to retype it.
 
 ## How it works
 

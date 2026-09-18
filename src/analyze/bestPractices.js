@@ -35,6 +35,7 @@ function checkDeepNesting(rules) {
         makeFinding({
           category: "best-practices",
           severity: "low",
+          type: "improvement",
           selector: rule.selector,
           source: rule.source,
           line: rule.line,
@@ -71,6 +72,7 @@ function checkInconsistentUnits(rules) {
       makeFinding({
         category: "best-practices",
         severity: "low",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
@@ -97,6 +99,7 @@ function checkVendorPrefixes(rules) {
           makeFinding({
             category: "best-practices",
             severity: "low",
+            type: "improvement",
             selector: rule.selector,
             source: rule.source,
             line: decl.line || rule.line,
@@ -130,6 +133,7 @@ function checkMagicNumbers(rules) {
             makeFinding({
               category: "best-practices",
               severity: "low",
+              type: "improvement",
               selector: rule.selector,
               source: rule.source,
               line: decl.line || rule.line,
@@ -150,6 +154,7 @@ function checkMagicNumbers(rules) {
         makeFinding({
           category: "best-practices",
           severity: "medium",
+          type: "improvement",
           selector: null,
           source: null,
           line: null,

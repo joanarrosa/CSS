@@ -30,6 +30,7 @@ export function analyzeOverrides(domResult) {
       makeFinding({
         category: "overrides",
         severity: entry.count > 5 ? "high" : "medium",
+        type: "error",
         selector: loser.selector,
         source: loser.source,
         line: loser.line,
@@ -61,6 +62,7 @@ export function analyzeOverrides(domResult) {
       makeFinding({
         category: "overrides",
         severity: "low",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,

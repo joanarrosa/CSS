@@ -14,6 +14,7 @@ export function analyzePerformance(cssSources, rules) {
       makeFinding({
         category: "performance",
         severity: totalBytes >= VERY_LARGE_STYLESHEET_BYTES ? "high" : "medium",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
@@ -33,6 +34,7 @@ export function analyzePerformance(cssSources, rules) {
         makeFinding({
           category: "performance",
           severity: "medium",
+          type: "improvement",
           selector: null,
           source: s.label,
           line: null,
@@ -51,6 +53,7 @@ export function analyzePerformance(cssSources, rules) {
       makeFinding({
         category: "performance",
         severity: "medium",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
@@ -66,6 +69,7 @@ export function analyzePerformance(cssSources, rules) {
       makeFinding({
         category: "performance",
         severity: "medium",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
@@ -81,6 +85,7 @@ export function analyzePerformance(cssSources, rules) {
       makeFinding({
         category: "performance",
         severity: "low",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,

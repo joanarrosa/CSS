@@ -12,6 +12,10 @@
   --low: #57606f;
   --low-bg: #eef0f3;
   --code-bg: #f0f1f4;
+  --error: #b3261e;
+  --error-bg: #fbeae9;
+  --improvement: #1a5276;
+  --improvement-bg: #e8f1f8;
 }
 
 * {
@@ -165,6 +169,56 @@ body {
   color: var(--low);
 }
 
+.type-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.type-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.type-pill--error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.type-pill--improvement {
+  background: var(--improvement-bg);
+  color: var(--improvement);
+}
+
+.type-hint {
+  color: var(--text-dim);
+  margin-right: 8px;
+}
+
+.type-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.type-badge--error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.type-badge--improvement {
+  background: var(--improvement-bg);
+  color: var(--improvement);
+}
+
 .category-counts {
   display: flex;
   flex-wrap: wrap;
@@ -183,6 +237,67 @@ body {
 
 .count-pill span {
   color: var(--text-dim);
+}
+
+.summary-actions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.secondary-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: var(--code-bg);
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.filter-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  border-color: var(--accent);
+}
+
+.filter-chip--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.category-description {
+  margin: 0 20px 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .top-fixes {
@@ -295,6 +410,19 @@ body {
 .finding p {
   margin: 4px 0;
   font-size: 14px;
+}
+
+.finding .where {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.finding .where strong {
+  color: var(--text-dim);
+}
+
+.finding .problem strong {
+  color: var(--text);
 }
 
 .finding .fix {

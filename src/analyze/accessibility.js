@@ -127,6 +127,7 @@ export async function analyzeAccessibility(page) {
       makeFinding({
         category: "accessibility",
         severity: entry.ratio < entry.threshold * 0.7 ? "high" : "medium",
+        type: "error",
         selector: entry.desc,
         source: "rendered page",
         line: null,
@@ -146,6 +147,7 @@ export async function analyzeAccessibility(page) {
       makeFinding({
         category: "accessibility",
         severity: "low",
+        type: "improvement",
         selector: c.desc,
         source: "rendered page",
         line: null,
@@ -160,6 +162,7 @@ export async function analyzeAccessibility(page) {
       makeFinding({
         category: "accessibility",
         severity: "low",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,

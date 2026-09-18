@@ -20,6 +20,23 @@ export const CATEGORY_LABELS = {
   performance: "Performance",
 };
 
+export const CATEGORY_DESCRIPTIONS = {
+  duplicates:
+    "Selectors defined more than once, or the same property/value repeated across many selectors. Wastes bytes and makes it unclear which definition is authoritative.",
+  overrides:
+    "Declarations that are set but never actually apply, because a later, more specific, or !important rule wins the cascade. The dead declaration is effectively silent code.",
+  specificity:
+    "!important overuse, ID selectors, and overly specific selector chains — these make the cascade harder to reason about and future overrides harder to write.",
+  unused:
+    "Selectors that don't match any element on this page/state. May be dead code, or may only apply on other pages, viewports, or interactive states — verify before deleting.",
+  "best-practices":
+    "Maintainability and consistency issues: magic numbers instead of variables, mixed units, vendor-prefix gaps, deep selector nesting, and invalid CSS syntax.",
+  accessibility:
+    "WCAG AA color-contrast failures and status conveyed by color alone — these affect real users, particularly people with low vision or color-vision deficiencies.",
+  performance:
+    "Stylesheet size, render-blocking loads, and selector counts that can delay first paint or slow down style recalculation.",
+};
+
 export function buildSummary(findings) {
   const counts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0]));
   for (const f of findings) {
@@ -28,9 +45,10 @@ export function buildSummary(findings) {
   }
 
   const ranked = [...findings].sort((a, b) => {
+    // Objective errors first, then severity, then impact (how many elements/occurrences affected).
+    if (a.type !== b.type) return a.type === "error" ? -1 : 1;
     const w = SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity];
     if (w !== 0) return w;
-    // Prefer findings that affect more elements/occurrences when available.
     const aImpact = a.meta?.count || a.meta?.affectedElements || a.meta?.occurrences?.length || 1;
     const bImpact = b.meta?.count || b.meta?.affectedElements || b.meta?.occurrences?.length || 1;
     return bImpact - aImpact;
@@ -49,6 +67,8 @@ export function buildSummary(findings) {
   const total = findings.length;
   const bySeverity = { high: 0, medium: 0, low: 0 };
   for (const f of findings) bySeverity[f.severity] = (bySeverity[f.severity] || 0) + 1;
+  const byType = { error: 0, improvement: 0 };
+  for (const f of findings) byType[f.type] = (byType[f.type] || 0) + 1;
 
-  return { total, counts, bySeverity, topFixes };
+  return { total, counts, bySeverity, byType, topFixes };
 }

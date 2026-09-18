@@ -20,6 +20,7 @@ export function analyzeSpecificity(rules) {
         makeFinding({
           category: "specificity",
           severity: spec.id === 0 && spec.class <= 1 ? "high" : "medium",
+          type: spec.id === 0 && spec.class <= 1 ? "error" : "improvement",
           selector: rule.selector,
           source: rule.source,
           line: rule.line,
@@ -40,6 +41,7 @@ export function analyzeSpecificity(rules) {
         makeFinding({
           category: "specificity",
           severity: spec.id > 1 ? "high" : "medium",
+          type: "improvement",
           selector: rule.selector,
           source: rule.source,
           line: rule.line,
@@ -56,6 +58,7 @@ export function analyzeSpecificity(rules) {
         makeFinding({
           category: "specificity",
           severity: "medium",
+          type: "improvement",
           selector: rule.selector,
           source: rule.source,
           line: rule.line,
@@ -73,6 +76,7 @@ export function analyzeSpecificity(rules) {
       makeFinding({
         category: "specificity",
         severity: "high",
+        type: "improvement",
         selector: null,
         source: null,
         line: null,
