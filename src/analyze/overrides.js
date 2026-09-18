@@ -15,12 +15,12 @@ export function analyzeOverrides(domResult) {
     if (!loser || !winner) continue;
     if (loser.selector === winner.selector && loser.source === winner.source) continue;
 
-    const winnerWhy =
-      winner.declarations.find((d) => d.property === entry.property)?.important
-        ? "!important"
-        : `higher specificity ${specificityToString(winner.specificityObj)} vs ${specificityToString(loser.specificityObj)}`;
+    const winnerIsImportant = !!winner.declarations.find((d) => d.property === entry.property)?.important;
     const sameSpecificity =
-      JSON.stringify(loser.specificityObj) === JSON.stringify(winner.specificityObj);
+      !winnerIsImportant && JSON.stringify(loser.specificityObj) === JSON.stringify(winner.specificityObj);
+    const winnerWhy = winnerIsImportant
+      ? "!important"
+      : `higher specificity ${specificityToString(winner.specificityObj)} vs ${specificityToString(loser.specificityObj)}`;
 
     const sampleDesc = entry.sample
       ? describeSample(entry.sample)

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node bin/css-audit.js",
-    "serve": "node bin/css-audit-web.js"
+    "serve": "node bin/css-audit-web.js",
+    "test": "node --test test/*.test.js"
   },
   "license": "MIT",
   "dependencies": {
