@@ -7,6 +7,7 @@ import { printAccessibilityReport } from "./report/axeTerminal.js";
 import { loadConfig, warnIfConfigProblem } from "./config.js";
 import { parseFailOn, shouldFail } from "./utils/failOn.js";
 import { buildHtmlReport } from "./report/html.js";
+import { captureAnnotatedScreenshot, buildCssAnnotations, buildA11yAnnotations } from "./screenshot.js";
 import { error as logError, info } from "./utils/logger.js";
 
 const HELP = `css-audit — analyze the CSS a page actually uses
@@ -24,6 +25,8 @@ Options:
   --fail-on <val>  Exit with code 1 if the result is worse than <val>: a letter grade (A-F,
                     e.g. "B" fails on C/D/F) or a numeric score 0-100 (fails if score < val).
                     For CI: gate a pipeline on css-audit without parsing its output.
+  --screenshot <file>  Save a full-page screenshot with the worst offending elements
+                        outlined and numbered
   --verbose        Print progress information to stderr
   -h, --help       Show this help
 `;
@@ -72,6 +75,7 @@ export async function main(argv) {
         warnings: site.warnings,
         ...a11yReport,
       };
+      if (args.screenshot) await takeScreenshot(site.page, buildA11yAnnotations(a11yReport.violations), args.screenshot);
       const a11ySummary = await writeReport(reportData, args, printAccessibilityReport, null, "a11y");
       applyFailOn(a11ySummary, failOnThreshold);
       return;
@@ -89,11 +93,21 @@ export async function main(argv) {
       findings,
     };
 
+    if (args.screenshot) await takeScreenshot(site.page, buildCssAnnotations(findings), args.screenshot);
     const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport, "css");
     applyFailOn(summary, failOnThreshold);
   } finally {
     await site.browser.close();
   }
+}
+
+async function takeScreenshot(page, annotations, outPath) {
+  if (annotations.length === 0) {
+    info(`No high-severity findings to annotate — skipping screenshot.`);
+    return;
+  }
+  const { path: savedPath, annotated } = await captureAnnotatedScreenshot(page, annotations, outPath);
+  info(`Screenshot saved to ${savedPath} (${annotated} element(s) outlined).`);
 }
 
 function applyFailOn(summary, threshold) {
@@ -157,6 +171,7 @@ function parseArgs(argv) {
     a11yReport: false,
     config: null,
     failOn: null,
+    screenshot: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -168,6 +183,7 @@ function parseArgs(argv) {
     else if (arg === "--a11y-report") args.a11yReport = true;
     else if (arg === "--config") args.config = argv[++i];
     else if (arg === "--fail-on") args.failOn = argv[++i];
+    else if (arg === "--screenshot") args.screenshot = argv[++i];
     else if (!arg.startsWith("-") && !args.url) args.url = arg;
   }
   return args;

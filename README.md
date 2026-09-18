@@ -146,6 +146,20 @@ See [`examples/github-action.yml`](examples/github-action.yml) for a
 copy-pasteable GitHub Action that runs css-audit against your site on
 every push/PR and fails the check if it regresses.
 
+#### Annotated screenshot
+
+```bash
+node bin/css-audit.js https://your-site.com --screenshot problems.png
+```
+
+Saves a full-page screenshot with a numbered, colored box drawn around
+every element involved in a high-severity finding (dead overridden
+styles, contrast failures) — a quick visual "here's where the problems
+actually are" instead of cross-referencing selectors by hand. Works with
+`--a11y-report` too, using axe-core's own per-element target selectors
+for placement. If there are no high-severity findings, it says so and
+skips writing a file rather than saving an empty screenshot.
+
 ### Web UI
 
 Prefer a browser? Start the local server:
