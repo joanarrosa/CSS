@@ -4,10 +4,12 @@
   "description": "Fetch a page, collect all the CSS it uses, and report duplicates, overridden rules, specificity issues, unused CSS, best-practice violations, accessibility contrast failures, and performance concerns.",
   "type": "module",
   "bin": {
-    "css-audit": "./bin/css-audit.js"
+    "css-audit": "./bin/css-audit.js",
+    "css-audit-web": "./bin/css-audit-web.js"
   },
   "scripts": {
-    "start": "node bin/css-audit.js"
+    "start": "node bin/css-audit.js",
+    "serve": "node bin/css-audit-web.js"
   },
   "license": "MIT",
   "dependencies": {

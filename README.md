@@ -1,8 +1,9 @@
 # css-audit
 
-A CLI that loads a page in headless Chromium, collects every bit of CSS it
-actually uses (linked stylesheets, `<style>` blocks, inline `style=""`
-attributes, and anything injected by JavaScript), and reports:
+A CLI (and optional local web UI) that loads a page in headless Chromium,
+collects every bit of CSS it actually uses (linked stylesheets, `<style>`
+blocks, inline `style=""` attributes, and anything injected by JavaScript),
+and reports:
 
 - **Duplicates** — identical selectors defined more than once, and
   identical `property: value` pairs repeated across many selectors.
@@ -33,6 +34,8 @@ automatically.
 
 ## Usage
 
+### CLI
+
 ```bash
 node bin/css-audit.js <url>
 ```
@@ -43,7 +46,7 @@ or, after `npm link` (or `npm install -g .`):
 css-audit <url>
 ```
 
-### Options
+#### Options
 
 | Flag              | Description                                             |
 | ----------------- | -------------------------------------------------------- |
@@ -52,7 +55,7 @@ css-audit <url>
 | `--verbose`, `-v` | Print progress to stderr while it runs                   |
 | `--help`, `-h`    | Show usage                                                |
 
-### Example
+#### Example
 
 ```bash
 node bin/css-audit.js https://example.com --verbose
@@ -62,6 +65,22 @@ Terminal output is grouped by category, with a summary (counts per category
 + top 3 priority fixes) at the top. Each finding includes the selector, the
 source file/`<style>` block (and line number when available), what's wrong,
 and a concrete suggested fix.
+
+### Web UI
+
+Prefer a browser? Start the local server:
+
+```bash
+npm run serve
+# or: node bin/css-audit-web.js [port]   (defaults to 4173)
+```
+
+Then open **http://localhost:4173**, paste a URL, and click "Analyze". It's
+a single page — URL input, results grouped by category, same summary and
+top-3-fixes as the CLI — served locally with no external dependencies beyond
+what `npm install` already pulled in (the UI is plain HTML/CSS/JS in
+`public/`, served by a small `node:http` server in `src/server.js` that
+reuses the exact same analysis engine as the CLI).
 
 ## How it works
 

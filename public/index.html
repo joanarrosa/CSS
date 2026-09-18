@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CSS Audit</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <h1>CSS Audit</h1>
+    <p>Paste a URL to analyze the CSS a page actually uses — duplicates, dead overrides, specificity issues, unused selectors, best practices, accessibility contrast, and performance.</p>
+  </header>
+
+  <form id="analyze-form" class="analyze-form">
+    <input id="url-input" type="url" placeholder="https://example.com" autocomplete="off" required />
+    <button id="analyze-btn" type="submit">Analyze</button>
+  </form>
+
+  <div id="status" class="status" role="status"></div>
+  <div id="summary"></div>
+  <div id="results"></div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
