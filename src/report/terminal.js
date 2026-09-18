@@ -33,7 +33,7 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
     color.dim(
       `Analyzed: ${stats.totalRules} rules across ${stats.totalSources} stylesheet source(s)${
         stats.parseErrors ? `, ${stats.parseErrors} parse error(s)` : ""
-      }`
+      }${stats.ignored ? `, ${stats.ignored} finding(s) hidden by ignore rules` : ""}`
     )
   );
   lines.push("");

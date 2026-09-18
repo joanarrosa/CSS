@@ -90,6 +90,36 @@ verify — e.g. something only checkable by eye), and **passes** (rules the
 page already satisfies). Combine with `--json` for the machine-readable
 shape.
 
+#### Ignoring findings
+
+Drop a `.css-auditrc.json` in the directory you run css-audit from (or
+point `--config <file>` at one anywhere) to permanently hide findings
+you've already triaged and decided not to fix — e.g. third-party CSS you
+don't control, or a false-positive "unused" selector you know is used on
+another page:
+
+```json
+{
+  "ignore": [
+    { "category": "unused" },
+    { "selector": ".legacy-*" },
+    { "source": "vendor.css" },
+    { "ruleId": "region" }
+  ]
+}
+```
+
+Each entry in `ignore` hides a finding if **every** field on that entry
+matches (`category`/`type`/`severity`/`ruleId` are exact matches,
+`selector` supports a `*` wildcard, `message`/`source` are
+case-insensitive substring matches). A finding is hidden if **any** entry
+matches. `ruleId` is for the accessibility report (matches axe-core's
+rule id, e.g. `"color-contrast"`, `"region"`); the other fields work for
+both reports. Applies automatically to the web UI too (it reads the same
+`.css-auditrc.json` from wherever you ran `npm run serve`) — no restart
+needed after editing it. The report always says how many findings were
+hidden, so filtering is never silent.
+
 ### Web UI
 
 Prefer a browser? Start the local server:

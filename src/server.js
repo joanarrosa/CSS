@@ -6,6 +6,7 @@ import { collectSite, FetchError } from "./collect.js";
 import { runFullAnalysis } from "./analyze/index.js";
 import { toJsonReport } from "./report/json.js";
 import { runAxeAudit, toAccessibilityReport } from "./axeAudit.js";
+import { loadConfig, warnIfConfigProblem } from "./config.js";
 import { info, error as logError } from "./utils/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -101,7 +102,8 @@ async function handleAnalyze(req, res) {
   if (site === null) return;
 
   try {
-    const { findings, stats } = await runFullAnalysis(site, { verbose: false });
+    const config = warnIfConfigProblem(() => loadConfig());
+    const { findings, stats } = await runFullAnalysis(site, { verbose: false, ignoreRules: config.ignore });
     const report = toJsonReport({
       url: site.url,
       finalUrl: site.finalUrl,
@@ -129,8 +131,9 @@ async function handleAccessibilityReport(req, res) {
 
   try {
     info(`Running accessibility audit for ${url} ...`);
+    const config = warnIfConfigProblem(() => loadConfig());
     const raw = await runAxeAudit(site.page);
-    const report = toAccessibilityReport(raw);
+    const report = toAccessibilityReport(raw, { ignoreRules: config.ignore });
     sendJson(res, 200, {
       url: site.url,
       finalUrl: site.finalUrl,

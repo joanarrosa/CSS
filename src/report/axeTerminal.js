@@ -39,7 +39,9 @@ export function printAccessibilityReport({ url, finalUrl, title, warnings, summa
   );
   lines.push(
     color.dim(
-      `  by impact — critical: ${summary.byImpact.critical}, serious: ${summary.byImpact.serious}, moderate: ${summary.byImpact.moderate}, minor: ${summary.byImpact.minor}`
+      `  by impact — critical: ${summary.byImpact.critical}, serious: ${summary.byImpact.serious}, moderate: ${summary.byImpact.moderate}, minor: ${summary.byImpact.minor}${
+        summary.ignored ? `  (${summary.ignored} hidden by ignore rules)` : ""
+      }`
     )
   );
   lines.push("");

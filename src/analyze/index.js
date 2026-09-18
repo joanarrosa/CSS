@@ -9,8 +9,9 @@ import { analyzeAccessibility } from "./accessibility.js";
 import { analyzePerformance } from "./performance.js";
 import { makeFinding } from "../utils/finding.js";
 import { info } from "../utils/logger.js";
+import { partitionIgnored } from "../config.js";
 
-export async function runFullAnalysis({ page, cssSources, inlineStyleElements }, { verbose = false } = {}) {
+export async function runFullAnalysis({ page, cssSources, inlineStyleElements }, { verbose = false, ignoreRules = [] } = {}) {
   if (verbose) info("Parsing CSS...");
   const { rules: parsedRules, parseErrors, atRuleBlocks } = parseAllSources(cssSources);
 
@@ -21,7 +22,7 @@ export async function runFullAnalysis({ page, cssSources, inlineStyleElements },
   const domResult = await matchRulesAgainstDom(page, rules);
 
   if (verbose) info("Running analyzers...");
-  const findings = [
+  const allFindings = [
     ...analyzeDuplicates(rules),
     ...analyzeOverrides(domResult),
     ...analyzeSpecificity(rules),
@@ -32,7 +33,13 @@ export async function runFullAnalysis({ page, cssSources, inlineStyleElements },
     ...parseErrorFindings(parseErrors),
   ];
 
-  return { findings, stats: { totalRules: rules.length, totalSources: cssSources.length, parseErrors: parseErrors.length } };
+  const { kept: findings, ignored } = partitionIgnored(allFindings, ignoreRules);
+  if (verbose && ignored.length) info(`${ignored.length} finding(s) hidden by ignore rules in the config.`);
+
+  return {
+    findings,
+    stats: { totalRules: rules.length, totalSources: cssSources.length, parseErrors: parseErrors.length, ignored: ignored.length },
+  };
 }
 
 // Inline style="" attributes behave like a rule with maximal specificity that

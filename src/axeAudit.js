@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { scoreFromPenalty } from "./utils/score.js";
+import { partitionIgnored } from "./config.js";
 
 const require = createRequire(import.meta.url);
 const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -36,10 +37,16 @@ const INCOMPLETE_PENALTY_FACTOR = 0.5; // needs manual review, not a confirmed f
  * carrying its WCAG tags, human-readable help, a doc link, and the specific
  * affected elements with axe's own per-node fix guidance.
  */
-export function toAccessibilityReport(rawResults) {
-  const violations = rawResults.violations.map(mapRule);
-  const incomplete = rawResults.incomplete.map(mapRule);
+export function toAccessibilityReport(rawResults, { ignoreRules = [] } = {}) {
+  let violations = rawResults.violations.map(mapRule);
+  let incomplete = rawResults.incomplete.map(mapRule);
   const passes = rawResults.passes.map(mapRule);
+
+  const violationsSplit = partitionIgnored(violations, ignoreRules);
+  const incompleteSplit = partitionIgnored(incomplete, ignoreRules);
+  violations = violationsSplit.kept;
+  incomplete = incompleteSplit.kept;
+  const ignoredCount = violationsSplit.ignored.length + incompleteSplit.ignored.length;
 
   violations.sort((a, b) => (IMPACT_ORDER[b.impact] || 0) - (IMPACT_ORDER[a.impact] || 0));
   incomplete.sort((a, b) => (IMPACT_ORDER[b.impact] || 0) - (IMPACT_ORDER[a.impact] || 0));
@@ -62,6 +69,7 @@ export function toAccessibilityReport(rawResults) {
       incomplete: incomplete.length,
       passes: passes.length,
       byImpact,
+      ignored: ignoredCount,
     },
     violations,
     incomplete,
