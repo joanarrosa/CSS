@@ -94,48 +94,36 @@ npm run serve
 # or: node bin/css-audit-web.js [port]   (defaults to 4173)
 ```
 
-Then open **http://localhost:4173**, paste a URL, and click "Analyze". It's
-a single page — URL input, results grouped by category, same summary and
-top-3-fixes as the CLI — served locally with no external dependencies beyond
-what `npm install` already pulled in (the UI is plain HTML/CSS/JS in
-`public/`, served by a small `node:http` server in `src/server.js` that
-reuses the exact same analysis engine as the CLI).
+Then open **http://localhost:4173**. There's one shared URL field at the
+top, and two independent tabs below it — analyzing one never touches the
+other, and switching tabs doesn't lose either report:
 
-The web UI adds a few things beyond what the terminal report shows:
-
-- **Filters** — click a category chip (Duplicates, Overrides, …) and/or a
-  type chip (Errors / Improvements) to narrow the results; both filters
-  combine (e.g. "Overrides" + "Errors" shows only overrides that are
-  objective bugs).
-- **Error vs. Improvement** — every finding is badged as one or the other
-  (see above), and the summary breaks out counts for each, so you can
-  triage "what's actually broken" separately from "what's worth polishing."
-- **Category tips** — each section opens with a one-line explanation of
-  what that category checks and why it matters.
-- **Clear location labels** — every finding shows *Where* (file/line),
-  *Problem*, and *Fix* as distinct labeled lines.
-- **Download JSON report** — one click saves the full report (same shape
-  as `--json`) to a file.
-- Your last-analyzed URL is remembered (browser `localStorage`) so you
-  don't have to retype it.
-
-Two more buttons sit above the results, independent of the main CSS audit:
-
-- **Accessibility Guide — How to improve** — toggles a static panel
-  summarizing the WCAG POUR principles (Perceivable, Operable,
-  Understandable, Robust) and a practical checklist, with links to the
-  [W3C WAI introduction](https://www.w3.org/WAI/fundamentals/accessibility-intro/)
-  and [MDN's accessibility docs](https://developer.mozilla.org/en-US/docs/Web/Accessibility).
-- **Full Accessibility Report** — runs a real WCAG 2.1 A/AA audit via
-  [axe-core](https://github.com/dequelabs/axe-core) (the same engine behind
-  Chrome DevTools' Lighthouse and countless other a11y tools) against the
-  live rendered page — not just CSS contrast, but alt text, form labels,
-  ARIA usage, heading structure, landmarks, and more. Results are grouped
-  into **Violations** (need to fix, each with the specific offending
-  elements and a fix suggestion), **Needs manual review** (axe can't be
-  fully sure — needs a human check), and **Already passing** (what the
-  page already gets right) — i.e. exactly "what you have vs. what you
-  need," per rule, with a link to that rule's documentation.
+- **CSS Audit tab** — same 7-category audit as the CLI, with:
+  - **Filters** — a labeled "Filter results" panel with a *Category* row
+    (Duplicates, Overrides, …) and a *Type* row (Errors / Improvements);
+    click a chip to narrow the results (they combine — "Overrides" +
+    "Errors" shows only overrides that are objective bugs), click it again
+    or pick "All" to reset. Active chips get a filled background and a
+    checkmark so it's clear they're toggles, not just buttons.
+  - **Error vs. Improvement** — every finding is badged as one or the other
+    (Error = objectively broken; Improvement = works today, worth
+    polishing), with counts broken out in the summary.
+  - **Category tips**, **Where/Problem/Fix** labels, **Download JSON**,
+    and a remembered last URL (`localStorage`) — as before.
+- **Accessibility tab** — a real WCAG 2.1 A/AA audit via
+  [axe-core](https://github.com/dequelabs/axe-core) (the engine behind
+  Chrome DevTools' Lighthouse) against the live rendered page: alt text,
+  form labels, ARIA usage, heading structure, landmarks, contrast, and
+  more — not just CSS. One button, no explainer text first. Results are
+  filterable the same way as the CSS tab:
+  - **Show** — All / Need to fix / Needs review / Already passing.
+  - **Impact** — All / Critical / Serious / Moderate / Minor; click an
+    impact chip (e.g. "Serious") to filter violations/incomplete down to
+    just that impact level and jump straight to them.
+  - Each violation/incomplete item shows the specific offending element(s),
+    axe's own fix guidance, the WCAG tags it maps to, and a link to that
+    rule's documentation. "Already passing" lists what the page already
+    gets right. Also has its own **Download JSON**.
 
 ## How it works
 

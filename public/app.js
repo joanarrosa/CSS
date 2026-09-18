@@ -1,13 +1,11 @@
-const form = document.getElementById("analyze-form");
 const urlInput = document.getElementById("url-input");
+
 const analyzeBtn = document.getElementById("analyze-btn");
 const statusEl = document.getElementById("status");
 const summaryEl = document.getElementById("summary");
 const filterBarEl = document.getElementById("filter-bar");
 const resultsEl = document.getElementById("results");
 
-const a11yGuideBtn = document.getElementById("a11y-guide-btn");
-const a11yGuidePanel = document.getElementById("a11y-guide");
 const a11yReportBtn = document.getElementById("a11y-report-btn");
 const a11yReportStatusEl = document.getElementById("a11y-report-status");
 const a11yReportEl = document.getElementById("a11y-report");
@@ -33,18 +31,54 @@ const CATEGORY_LABELS = {
 };
 
 const SEVERITY_WEIGHT = { high: 3, medium: 2, low: 1 };
+const IMPACT_WEIGHT = { critical: 4, serious: 3, moderate: 2, minor: 1 };
+const IMPACT_LABELS = { critical: "Critical", serious: "Serious", moderate: "Moderate", minor: "Minor" };
 const LAST_URL_KEY = "css-audit:last-url";
 
 let currentData = null;
 let activeCategory = "all";
 let activeType = "all";
 
-restoreLastUrl();
+let currentA11yData = null;
+let activeA11yShow = "all";
+let activeA11yImpact = "all";
 
-form.addEventListener("submit", async (e) => {
+restoreLastUrl();
+initTabs();
+
+// Enter key in the shared URL input triggers whichever tab is active.
+urlInput.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
   e.preventDefault();
+  const activeTab = document.querySelector(".tab-btn--active").dataset.tab;
+  if (activeTab === "css") analyzeBtn.click();
+  else a11yReportBtn.click();
+});
+
+// --- Tabs ---
+
+function initTabs() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => {
+        b.classList.toggle("tab-btn--active", b === btn);
+        b.setAttribute("aria-selected", String(b === btn));
+      });
+      document.querySelectorAll(".tab-panel").forEach((panel) => {
+        panel.hidden = panel.dataset.tabPanel !== btn.dataset.tab;
+      });
+    });
+  });
+}
+
+// --- CSS Audit tab ---
+
+analyzeBtn.addEventListener("click", async () => {
   const url = urlInput.value.trim();
-  if (!url) return;
+  if (!url) {
+    showError("Enter a URL above first.");
+    return;
+  }
 
   rememberUrl(url);
   activeCategory = "all";
@@ -95,7 +129,7 @@ function rememberUrl(url) {
 
 function setLoading(loading) {
   analyzeBtn.disabled = loading;
-  analyzeBtn.textContent = loading ? "Analyzing…" : "Analyze";
+  analyzeBtn.textContent = loading ? "Analyzing…" : "Analyze CSS";
   if (loading) {
     statusEl.textContent =
       "Loading the page in a headless browser and analyzing its CSS — this can take several seconds…";
@@ -160,7 +194,7 @@ function renderSummary(data) {
     </div>
   `;
   summaryEl.appendChild(summaryCard);
-  document.getElementById("download-json-btn").addEventListener("click", () => downloadJson(data));
+  document.getElementById("download-json-btn").addEventListener("click", () => downloadJson(data, "css-audit"));
 
   if (data.summary.topPriorityFixes.length) {
     const topBox = document.createElement("div");
@@ -186,13 +220,13 @@ function renderSummary(data) {
   }
 }
 
-function downloadJson(data) {
+function downloadJson(data, prefix) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const hostname = safeHostname(data.url);
   a.href = url;
-  a.download = `css-audit-${hostname}-${Date.now()}.json`;
+  a.download = `${prefix}-${hostname}-${Date.now()}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -207,54 +241,92 @@ function safeHostname(url) {
   }
 }
 
-function renderFilterBar(data) {
-  filterBarEl.innerHTML = "";
+// --- Shared filter-bar UI ---
+// Builds a labeled, card-styled filter panel: one or more rows, each with a
+// text label and a group of toggle chips (checkbox-like: one active value
+// per row, "All ..." always resets it).
 
-  const categoryRow = document.createElement("div");
-  categoryRow.className = "filter-row";
-  categoryRow.appendChild(makeFilterChip("all", "All categories", sumCounts(data.summary.counts), "category"));
-  for (const cat of CATEGORY_ORDER) {
-    const n = data.summary.counts[cat] || 0;
-    if (n === 0) continue;
-    categoryRow.appendChild(makeFilterChip(cat, CATEGORY_LABELS[cat], n, "category"));
+function buildFilterBar(container, rows) {
+  container.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "filter-panel";
+
+  const heading = document.createElement("div");
+  heading.className = "filter-panel-heading";
+  heading.textContent = "Filter results";
+  panel.appendChild(heading);
+
+  for (const row of rows) {
+    const group = document.createElement("div");
+    group.className = "filter-group";
+
+    const label = document.createElement("span");
+    label.className = "filter-label";
+    label.textContent = row.label;
+    group.appendChild(label);
+
+    const chips = document.createElement("div");
+    chips.className = "filter-chips";
+    for (const opt of row.options) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "filter-chip";
+      chip.dataset.row = row.key;
+      chip.dataset.value = opt.value;
+      chip.textContent = `${opt.label} (${opt.count})`;
+      if (row.active === opt.value) chip.classList.add("filter-chip--active");
+      chip.addEventListener("click", () => row.onSelect(opt.value));
+      chips.appendChild(chip);
+    }
+    group.appendChild(chips);
+    panel.appendChild(group);
   }
-  filterBarEl.appendChild(categoryRow);
 
-  const typeRow = document.createElement("div");
-  typeRow.className = "filter-row";
-  typeRow.appendChild(makeFilterChip("all", "All types", data.summary.total, "type"));
-  typeRow.appendChild(makeFilterChip("error", "Errors", data.summary.byType.error || 0, "type"));
-  typeRow.appendChild(makeFilterChip("improvement", "Improvements", data.summary.byType.improvement || 0, "type"));
-  filterBarEl.appendChild(typeRow);
+  container.appendChild(panel);
+}
+
+// --- CSS Audit filters + results ---
+
+function renderFilterBar(data) {
+  buildFilterBar(filterBarEl, [
+    {
+      key: "category",
+      label: "Category:",
+      active: activeCategory,
+      onSelect: (value) => {
+        activeCategory = value;
+        renderFilterBar(currentData);
+        renderResults(currentData);
+      },
+      options: [
+        { value: "all", label: "All categories", count: sumCounts(data.summary.counts) },
+        ...CATEGORY_ORDER.filter((c) => (data.summary.counts[c] || 0) > 0).map((c) => ({
+          value: c,
+          label: CATEGORY_LABELS[c],
+          count: data.summary.counts[c] || 0,
+        })),
+      ],
+    },
+    {
+      key: "type",
+      label: "Type:",
+      active: activeType,
+      onSelect: (value) => {
+        activeType = value;
+        renderFilterBar(currentData);
+        renderResults(currentData);
+      },
+      options: [
+        { value: "all", label: "All types", count: data.summary.total },
+        { value: "error", label: "Errors", count: data.summary.byType.error || 0 },
+        { value: "improvement", label: "Improvements", count: data.summary.byType.improvement || 0 },
+      ],
+    },
+  ]);
 }
 
 function sumCounts(counts) {
   return Object.values(counts).reduce((a, b) => a + b, 0);
-}
-
-function makeFilterChip(value, label, count, kind) {
-  const chip = document.createElement("button");
-  chip.type = "button";
-  chip.className = "filter-chip";
-  chip.dataset.kind = kind;
-  chip.dataset.value = value;
-  chip.textContent = `${label} (${count})`;
-  const active = kind === "category" ? activeCategory : activeType;
-  if (active === value) chip.classList.add("filter-chip--active");
-  chip.addEventListener("click", () => {
-    if (kind === "category") activeCategory = value;
-    else activeType = value;
-    updateFilterChipStates();
-    renderResults(currentData);
-  });
-  return chip;
-}
-
-function updateFilterChipStates() {
-  filterBarEl.querySelectorAll(".filter-chip").forEach((chip) => {
-    const active = chip.dataset.kind === "category" ? activeCategory : activeType;
-    chip.classList.toggle("filter-chip--active", chip.dataset.value === active);
-  });
 }
 
 function renderResults(data) {
@@ -309,6 +381,8 @@ function renderResults(data) {
         : "No findings match the current filters.";
     resultsEl.appendChild(emptyBox);
   }
+
+  resultsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function renderFindingCard(f) {
@@ -334,17 +408,7 @@ function escapeHtml(str) {
   );
 }
 
-// --- Accessibility Guide (static panel) ---
-
-a11yGuideBtn.addEventListener("click", () => {
-  a11yGuidePanel.hidden = !a11yGuidePanel.hidden;
-  if (!a11yGuidePanel.hidden) a11yGuidePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
-
-// --- Full Accessibility Report (axe-core) ---
-
-const IMPACT_WEIGHT = { critical: 4, serious: 3, moderate: 2, minor: 1 };
-const IMPACT_LABELS = { critical: "Critical", serious: "Serious", moderate: "Moderate", minor: "Minor" };
+// --- Accessibility tab ---
 
 a11yReportBtn.addEventListener("click", async () => {
   const url = urlInput.value.trim();
@@ -355,6 +419,8 @@ a11yReportBtn.addEventListener("click", async () => {
   }
 
   rememberUrl(url);
+  activeA11yShow = "all";
+  activeA11yImpact = "all";
   a11yReportEl.innerHTML = "";
   a11yReportBtn.disabled = true;
   a11yReportBtn.textContent = "Running audit…";
@@ -375,14 +441,14 @@ a11yReportBtn.addEventListener("click", async () => {
     }
     a11yReportStatusEl.textContent = "";
     a11yReportStatusEl.className = "status";
+    currentA11yData = data;
     renderAxeReport(data);
-    a11yReportEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     a11yReportStatusEl.textContent = "Network error: " + err.message;
     a11yReportStatusEl.className = "status status--error";
   } finally {
     a11yReportBtn.disabled = false;
-    a11yReportBtn.textContent = "Full Accessibility Report";
+    a11yReportBtn.textContent = "Analyze Accessibility";
   }
 });
 
@@ -404,35 +470,113 @@ function renderAxeReport(data) {
   summaryCard.innerHTML = `
     <div class="summary-header">
       <div>
-        <h2>Accessibility Report — ${escapeHtml(data.title || data.url)}</h2>
+        <h2>${escapeHtml(data.title || data.url)}</h2>
         <div class="meta">${escapeHtml(data.url)}${
     data.finalUrl && data.finalUrl !== data.url ? " → " + escapeHtml(data.finalUrl) : ""
   }</div>
         <div class="meta">WCAG 2.1 A/AA + best-practice rules, via axe-core</div>
       </div>
     </div>
-    <div class="type-row">
-      <span class="type-pill type-pill--error">${data.summary.violations} need to fix</span>
-      <span class="type-pill type-pill--review">${data.summary.incomplete} need manual review</span>
-      <span class="type-pill type-pill--pass">${data.summary.passes} already passing</span>
-    </div>
-    <div class="category-counts">
-      ${Object.entries(data.summary.byImpact)
-        .filter(([, n]) => n > 0)
-        .map(([impact, n]) => `<div class="count-pill"><span>${IMPACT_LABELS[impact]}</span><strong>${n}</strong></div>`)
-        .join("")}
+    <div class="summary-actions">
+      <button id="download-a11y-json-btn" type="button" class="secondary-btn">Download JSON report</button>
     </div>
   `;
   a11yReportEl.appendChild(summaryCard);
+  document.getElementById("download-a11y-json-btn").addEventListener("click", () => downloadJson(data, "accessibility"));
 
-  if (data.violations.length) {
-    a11yReportEl.appendChild(renderAxeSection("Violations — need to fix", data.violations, "violation"));
+  const a11yFilterBarEl = document.createElement("div");
+  a11yReportEl.appendChild(a11yFilterBarEl);
+
+  const a11yResultsEl = document.createElement("div");
+  a11yReportEl.appendChild(a11yResultsEl);
+
+  renderA11yFilterBar(data, a11yFilterBarEl, a11yResultsEl);
+  renderA11yResults(data, a11yResultsEl);
+}
+
+function renderA11yFilterBar(data, filterBarContainer, resultsContainer) {
+  const impactCounts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
+  for (const rule of [...data.violations, ...data.incomplete]) {
+    if (rule.impact && impactCounts[rule.impact] !== undefined) impactCounts[rule.impact]++;
   }
-  if (data.incomplete.length) {
-    a11yReportEl.appendChild(renderAxeSection("Needs manual review", data.incomplete, "review"));
+  const impactOptions = Object.entries(impactCounts)
+    .filter(([, n]) => n > 0)
+    .sort(([a], [b]) => (IMPACT_WEIGHT[b] || 0) - (IMPACT_WEIGHT[a] || 0))
+    .map(([impact, n]) => ({ value: impact, label: IMPACT_LABELS[impact], count: n }));
+
+  buildFilterBar(filterBarContainer, [
+    {
+      key: "show",
+      label: "Show:",
+      active: activeA11yShow,
+      onSelect: (value) => {
+        activeA11yShow = value;
+        renderA11yFilterBar(data, filterBarContainer, resultsContainer);
+        renderA11yResults(data, resultsContainer);
+      },
+      options: [
+        { value: "all", label: "All", count: data.summary.violations + data.summary.incomplete + data.summary.passes },
+        { value: "violation", label: "Need to fix", count: data.summary.violations },
+        { value: "incomplete", label: "Needs review", count: data.summary.incomplete },
+        { value: "pass", label: "Already passing", count: data.summary.passes },
+      ],
+    },
+    {
+      key: "impact",
+      label: "Impact:",
+      active: activeA11yImpact,
+      onSelect: (value) => {
+        activeA11yImpact = value;
+        renderA11yFilterBar(data, filterBarContainer, resultsContainer);
+        renderA11yResults(data, resultsContainer);
+        resultsContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+      options: [
+        { value: "all", label: "All", count: impactOptions.reduce((sum, o) => sum + o.count, 0) },
+        ...impactOptions,
+      ],
+    },
+  ]);
+}
+
+function renderA11yResults(data, container) {
+  container.innerHTML = "";
+
+  const impactMatch = (rule) => activeA11yImpact === "all" || rule.impact === activeA11yImpact;
+
+  const violations = data.violations.filter(impactMatch);
+  const incomplete = data.incomplete.filter(impactMatch);
+  // "passes" carry no impact, so the impact filter doesn't apply to them —
+  // they only disappear when Impact narrows the view away from "all" while Show is restricted to violation/incomplete.
+  const passes = activeA11yImpact === "all" ? data.passes : [];
+
+  const showViolations = activeA11yShow === "all" || activeA11yShow === "violation";
+  const showIncomplete = activeA11yShow === "all" || activeA11yShow === "incomplete";
+  const showPasses = activeA11yShow === "all" || activeA11yShow === "pass";
+
+  let shown = 0;
+
+  if (showViolations && violations.length) {
+    shown += violations.length;
+    container.appendChild(renderAxeSection("Violations — need to fix", violations, "violation"));
   }
-  if (data.passes.length) {
-    a11yReportEl.appendChild(renderAxePassSection(data.passes));
+  if (showIncomplete && incomplete.length) {
+    shown += incomplete.length;
+    container.appendChild(renderAxeSection("Needs manual review", incomplete, "review"));
+  }
+  if (showPasses && passes.length) {
+    shown += passes.length;
+    container.appendChild(renderAxePassSection(passes));
+  }
+
+  if (shown === 0) {
+    const emptyBox = document.createElement("div");
+    emptyBox.className = "summary-card";
+    emptyBox.textContent =
+      activeA11yShow === "all" && activeA11yImpact === "all"
+        ? "No accessibility issues found."
+        : "No results match the current filters.";
+    container.appendChild(emptyBox);
   }
 }
 
