@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CSS Audit</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="head">
+    <div class="head-title">
+      <span class="dot"></span>
+      <h1>CSS Audit</h1>
+    </div>
+    <div id="page-host" class="page-host">—</div>
+  </header>
+
+  <div id="unsupported" class="unsupported hidden">
+    Can't analyze this page — browser/extension pages (<code>chrome://</code>, the Web Store, etc.) aren't
+    accessible to extensions.
+  </div>
+
+  <div id="idle" class="idle-panel">
+    <button id="analyze-btn" class="primary-btn">Analyze this page</button>
+    <p class="hint">Runs entirely in this tab. Fetches linked stylesheets to read their CSS, but never sends
+      anything off your device.</p>
+  </div>
+
+  <div id="loading" class="loading-panel hidden">
+    <div class="spinner"></div>
+    <span id="loading-text">Analyzing…</span>
+  </div>
+
+  <div id="error-panel" class="error-panel hidden">
+    <p id="error-text"></p>
+    <button id="retry-btn" class="secondary-btn">Try again</button>
+  </div>
+
+  <div id="report" class="report hidden">
+    <div class="summary-row">
+      <div id="score-badge" class="score-badge">—</div>
+      <div class="summary-counts">
+        <div id="severity-counts" class="severity-counts"></div>
+        <div id="type-counts" class="type-counts"></div>
+      </div>
+    </div>
+
+    <div id="warnings" class="warnings hidden"></div>
+
+    <div class="filter-row" id="category-filters"></div>
+    <div class="filter-row" id="type-filters"></div>
+
+    <div id="findings" class="findings"></div>
+
+    <div class="actions">
+      <button id="reanalyze-btn" class="secondary-btn">Re-analyze</button>
+      <button id="download-json-btn" class="secondary-btn">Download JSON</button>
+      <button id="download-fix-btn" class="secondary-btn hidden">Download fixed CSS</button>
+    </div>
+
+    <div id="autofix-note" class="autofix-note hidden"></div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

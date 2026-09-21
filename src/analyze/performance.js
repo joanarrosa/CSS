@@ -5,10 +5,17 @@ const VERY_LARGE_STYLESHEET_BYTES = 300 * 1024;
 const RENDER_BLOCKING_WARNING_COUNT = 3;
 const HIGH_SELECTOR_COUNT = 4000;
 
+// TextEncoder (not Buffer) so this works unmodified in a browser too — this
+// module is bundled as-is into the browser extension.
+const encoder = new TextEncoder();
+function byteLength(str) {
+  return encoder.encode(str).length;
+}
+
 export function analyzePerformance(cssSources, rules) {
   const findings = [];
 
-  const totalBytes = cssSources.reduce((sum, s) => sum + Buffer.byteLength(s.text, "utf8"), 0);
+  const totalBytes = cssSources.reduce((sum, s) => sum + byteLength(s.text), 0);
   if (totalBytes >= LARGE_STYLESHEET_BYTES) {
     findings.push(
       makeFinding({
@@ -28,7 +35,7 @@ export function analyzePerformance(cssSources, rules) {
   }
 
   for (const s of cssSources) {
-    const bytes = Buffer.byteLength(s.text, "utf8");
+    const bytes = byteLength(s.text);
     if (bytes >= VERY_LARGE_STYLESHEET_BYTES) {
       findings.push(
         makeFinding({

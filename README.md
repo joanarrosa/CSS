@@ -267,6 +267,13 @@ exactly like the page you're looking at — same filters, same score badge
 who doesn't have css-audit installed, or archiving a report from a
 one-off audit.
 
+### Browser extension
+
+Prefer clicking a toolbar icon over pasting a URL? `extension/` is a
+Chrome/Edge extension that runs the same analysis engine directly against
+whatever tab is open — see [`extension/README.md`](extension/README.md) for
+what it does differently (no Playwright, no server) and how to load it.
+
 ## How it works
 
 1. **Collect** (`src/collect.js`): Playwright launches headless Chromium,

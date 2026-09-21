@@ -9,83 +9,97 @@ const MAX_SAMPLES = 1500;
  * Also flags a best-effort heuristic for "color alone conveys meaning".
  */
 export async function analyzeAccessibility(page) {
-  const findings = [];
+  const samples = await page.evaluate(sampleAccessibilityInPage, MAX_SAMPLES);
+  return buildAccessibilityFindings(samples);
+}
 
-  const samples = await page.evaluate((max) => {
-    function isVisible(el) {
+// Self-contained on purpose (references only its own parameter and browser
+// globals) so it can run either via page.evaluate(sampleAccessibilityInPage,
+// max) (Playwright) or be called directly when already running inside the
+// page (the browser extension).
+export function sampleAccessibilityInPage(max) {
+  function isVisible(el) {
+    const cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function effectiveBackground(el) {
+    let cur = el;
+    while (cur) {
+      const cs = getComputedStyle(cur);
+      const bg = cs.backgroundColor;
+      if (bg && bg !== "transparent" && !/rgba\([^)]*,\s*0\s*\)/.test(bg)) {
+        return bg;
+      }
+      cur = cur.parentElement;
+    }
+    return "rgb(255, 255, 255)";
+  }
+
+  function describeEl(el) {
+    let s = el.tagName.toLowerCase();
+    if (el.id) s += `#${el.id}`;
+    const cls = el.className && typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 2) : [];
+    if (cls.length) s += `.${cls.join(".")}`;
+    return s;
+  }
+
+  const out = [];
+  const colorMeaningCandidates = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
+  let node = walker.currentNode;
+  let count = 0;
+
+  const MEANING_CLASS_RE = /^(error|success|warning|danger|invalid|valid|alert-(danger|success|warning))$/i;
+
+  while (node && count < max) {
+    const el = node;
+    node = walker.nextNode();
+
+    const hasDirectText = [...el.childNodes].some(
+      (n) => n.nodeType === 3 && n.textContent.trim().length > 0
+    );
+    if (hasDirectText && isVisible(el)) {
       const cs = getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
+      out.push({
+        desc: describeEl(el),
+        color: cs.color,
+        backgroundColor: effectiveBackground(el),
+        fontSize: parseFloat(cs.fontSize),
+        fontWeight: cs.fontWeight,
+        text: el.textContent.trim().slice(0, 40),
+      });
+      count++;
     }
 
-    function effectiveBackground(el) {
-      let cur = el;
-      while (cur) {
-        const cs = getComputedStyle(cur);
-        const bg = cs.backgroundColor;
-        if (bg && bg !== "transparent" && !/rgba\([^)]*,\s*0\s*\)/.test(bg)) {
-          return bg;
-        }
-        cur = cur.parentElement;
-      }
-      return "rgb(255, 255, 255)";
-    }
-
-    function describeEl(el) {
-      let s = el.tagName.toLowerCase();
-      if (el.id) s += `#${el.id}`;
-      const cls = el.className && typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 2) : [];
-      if (cls.length) s += `.${cls.join(".")}`;
-      return s;
-    }
-
-    const out = [];
-    const colorMeaningCandidates = [];
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
-    let node = walker.currentNode;
-    let count = 0;
-
-    const MEANING_CLASS_RE = /^(error|success|warning|danger|invalid|valid|alert-(danger|success|warning))$/i;
-
-    while (node && count < max) {
-      const el = node;
-      node = walker.nextNode();
-
-      const hasDirectText = [...el.childNodes].some(
-        (n) => n.nodeType === 3 && n.textContent.trim().length > 0
-      );
-      if (hasDirectText && isVisible(el)) {
-        const cs = getComputedStyle(el);
-        out.push({
-          desc: describeEl(el),
-          color: cs.color,
-          backgroundColor: effectiveBackground(el),
-          fontSize: parseFloat(cs.fontSize),
-          fontWeight: cs.fontWeight,
-          text: el.textContent.trim().slice(0, 40),
-        });
-        count++;
-      }
-
-      if (el.classList) {
-        for (const cls of el.classList) {
-          if (MEANING_CLASS_RE.test(cls)) {
-            const hasIcon = !!el.querySelector("svg, img, [class*='icon']");
-            const hasAriaLabel = el.hasAttribute("aria-label") || el.hasAttribute("aria-describedby") || el.hasAttribute("role");
-            const hasVisibleText = el.textContent.trim().length > 0;
-            if (!hasIcon && !hasAriaLabel && hasVisibleText) {
-              colorMeaningCandidates.push({ desc: describeEl(el), cls, text: el.textContent.trim().slice(0, 40) });
-            }
-            break;
+    if (el.classList) {
+      for (const cls of el.classList) {
+        if (MEANING_CLASS_RE.test(cls)) {
+          const hasIcon = !!el.querySelector("svg, img, [class*='icon']");
+          const hasAriaLabel = el.hasAttribute("aria-label") || el.hasAttribute("aria-describedby") || el.hasAttribute("role");
+          const hasVisibleText = el.textContent.trim().length > 0;
+          if (!hasIcon && !hasAriaLabel && hasVisibleText) {
+            colorMeaningCandidates.push({ desc: describeEl(el), cls, text: el.textContent.trim().slice(0, 40) });
           }
+          break;
         }
       }
     }
+  }
 
-    return { samples: out, colorMeaningCandidates: colorMeaningCandidates.slice(0, 20) };
-  }, MAX_SAMPLES);
+  return { samples: out, colorMeaningCandidates: colorMeaningCandidates.slice(0, 20) };
+}
 
+/**
+ * Turns raw sampled color/background/font data (from sampleAccessibilityInPage)
+ * into contrast-failure and color-meaning findings. Pure — no DOM access —
+ * so it's shared as-is between the Playwright CLI/web-UI path and the
+ * browser extension.
+ */
+export function buildAccessibilityFindings(samples) {
+  const findings = [];
   const seen = new Map(); // dedupe identical color/bg/fontSize combos
   let checked = 0;
   let failures = 0;
