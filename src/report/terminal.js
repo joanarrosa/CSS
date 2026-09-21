@@ -29,6 +29,9 @@ export function printTerminalReport({ url, finalUrl, title, status, warnings, st
   lines.push(color.dim(`URL:      ${url}${finalUrl && finalUrl !== url ? ` -> ${finalUrl}` : ""}`));
   if (title) lines.push(color.dim(`Title:    ${title}`));
   if (status) lines.push(color.dim(`HTTP:     ${status}`));
+  if (stats.pagesCrawled) {
+    lines.push(color.dim(`Crawled:  ${stats.pagesCrawled} page(s): ${stats.crawledUrls.join(", ")}`));
+  }
   lines.push(
     color.dim(
       `Analyzed: ${stats.totalRules} rules across ${stats.totalSources} stylesheet source(s)${

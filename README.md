@@ -62,6 +62,9 @@ css-audit <url>
 | `--a11y-report`   | Run a full WCAG 2.1 A/AA accessibility audit (axe-core) instead of the CSS audit |
 | `--config <file>` | Ignore-rules config (default: `.css-auditrc.json` in the current directory) |
 | `--fail-on <val>` | Exit 1 if the result is worse than `<val>` — see "CI mode" below |
+| `--screenshot <file>` | Save an annotated screenshot — see "Annotated screenshot" below |
+| `--crawl`         | Crawl same-origin pages and merge results — see "Crawling multiple pages" below |
+| `--max-pages <n>` | Max pages to visit with `--crawl` (default: 5)            |
 | `--verbose`, `-v` | Print progress to stderr while it runs                   |
 | `--help`, `-h`    | Show usage                                                |
 
@@ -159,6 +162,25 @@ actually are" instead of cross-referencing selectors by hand. Works with
 `--a11y-report` too, using axe-core's own per-element target selectors
 for placement. If there are no high-severity findings, it says so and
 skips writing a file rather than saving an empty screenshot.
+
+#### Crawling multiple pages
+
+```bash
+node bin/css-audit.js https://your-site.com --crawl --max-pages 10
+```
+
+A single-page audit's biggest source of false positives is "unused" CSS —
+a selector might just belong to a page you didn't check. `--crawl`
+crawls same-origin links breadth-first from the start URL (default 5
+pages, override with `--max-pages`) and audits each one independently,
+then merges the results: **a selector is only reported unused if it
+never matched an element on any of the crawled pages** — used it on even
+one of them, and it's dropped from the unused list entirely. Every other
+finding is deduped across pages too (a shared stylesheet's issues aren't
+repeated once per page); `meta.pageCount`/`meta.pages` in the JSON output
+records how many of the crawled pages each finding applies to. Not yet
+supported together with `--a11y-report` or `--screenshot` — run those
+separately.
 
 ### Web UI
 
@@ -259,6 +281,15 @@ changes:
 ```bash
 cd test-fixtures && python3 -m http.server 8934 &
 node ../bin/css-audit.js http://localhost:8934/index.html
+```
+
+There's also a linked `page2.html`, used to sanity-check `--crawl`: it
+uses a selector (`.unused-selector-1`) that `index.html` doesn't, so a
+single-page audit of `index.html` alone reports it unused, while crawling
+both pages correctly drops it from the unused list.
+
+```bash
+node ../bin/css-audit.js http://localhost:8934/index.html --crawl --max-pages 5
 ```
 
 ## Tests

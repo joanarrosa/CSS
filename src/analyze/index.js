@@ -39,7 +39,25 @@ export async function runFullAnalysis({ page, cssSources, inlineStyleElements },
   return {
     findings,
     stats: { totalRules: rules.length, totalSources: cssSources.length, parseErrors: parseErrors.length, ignored: ignored.length },
+    // Per-selector match data (not just the findings derived from it) — used by
+    // crawl.js to correctly reconcile "unused" across multiple pages: a finding
+    // alone can't tell you a selector matched, since a used selector with no
+    // other issues produces no finding at all.
+    selectorMatches: buildSelectorMatches(domResult),
   };
+}
+
+function buildSelectorMatches(domResult) {
+  const { rules, matchCounts } = domResult;
+  const out = [];
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i];
+    if (rule.sourceType === "inline") continue;
+    const count = matchCounts[i];
+    if (count === null || count === undefined) continue;
+    out.push({ source: rule.source, selector: rule.selector, matched: count > 0 });
+  }
+  return out;
 }
 
 // Inline style="" attributes behave like a rule with maximal specificity that

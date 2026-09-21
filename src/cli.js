@@ -8,6 +8,7 @@ import { loadConfig, warnIfConfigProblem } from "./config.js";
 import { parseFailOn, shouldFail } from "./utils/failOn.js";
 import { buildHtmlReport } from "./report/html.js";
 import { captureAnnotatedScreenshot, buildCssAnnotations, buildA11yAnnotations } from "./screenshot.js";
+import { crawlAndAnalyze, mergeFindings } from "./crawl.js";
 import { error as logError, info } from "./utils/logger.js";
 
 const HELP = `css-audit — analyze the CSS a page actually uses
@@ -27,6 +28,10 @@ Options:
                     For CI: gate a pipeline on css-audit without parsing its output.
   --screenshot <file>  Save a full-page screenshot with the worst offending elements
                         outlined and numbered
+  --crawl          Crawl same-origin pages from <url> (breadth-first) and merge results —
+                    a selector is only reported "unused" if it's unused on every crawled
+                    page. Not yet supported together with --a11y-report or --screenshot.
+  --max-pages <n>  Max pages to visit with --crawl (default: 5)
   --verbose        Print progress information to stderr
   -h, --help       Show this help
 `;
@@ -51,6 +56,19 @@ export async function main(argv) {
 
   const config = warnIfConfigProblem(() => loadConfig(args.config));
   if (args.verbose && config.path) info(`Using config: ${config.path} (${config.ignore.length} ignore rule(s))`);
+
+  if (args.crawl) {
+    if (args.a11yReport) {
+      logError("--crawl doesn't support --a11y-report yet — run them separately.");
+      process.exit(2);
+    }
+    if (args.screenshot) {
+      logError("--crawl doesn't support --screenshot yet — run them separately.");
+      process.exit(2);
+    }
+    await runCrawl(args, config, failOnThreshold);
+    return;
+  }
 
   let site;
   try {
@@ -99,6 +117,44 @@ export async function main(argv) {
   } finally {
     await site.browser.close();
   }
+}
+
+async function runCrawl(args, config, failOnThreshold) {
+  const maxPages = args.maxPages ? Number(args.maxPages) : undefined;
+  if (args.maxPages && (!Number.isInteger(maxPages) || maxPages < 1)) {
+    logError(`Invalid --max-pages value "${args.maxPages}" — must be a positive integer.`);
+    process.exit(2);
+  }
+
+  const pages = await crawlAndAnalyze(args.url, { maxPages, verbose: args.verbose, ignoreRules: config.ignore });
+  if (pages.length === 0) {
+    logError(`Could not successfully analyze any page starting from "${args.url}".`);
+    process.exit(2);
+  }
+
+  const findings = mergeFindings(pages);
+  const first = pages[0];
+  const stats = {
+    totalRules: pages.reduce((sum, p) => sum + p.stats.totalRules, 0),
+    totalSources: pages.reduce((sum, p) => sum + p.stats.totalSources, 0),
+    parseErrors: pages.reduce((sum, p) => sum + p.stats.parseErrors, 0),
+    ignored: pages.reduce((sum, p) => sum + p.stats.ignored, 0),
+    pagesCrawled: pages.length,
+    crawledUrls: pages.map((p) => p.url),
+  };
+
+  const reportData = {
+    url: args.url,
+    finalUrl: first.finalUrl,
+    title: pages.length > 1 ? `${first.title} (+ ${pages.length - 1} more page${pages.length - 1 === 1 ? "" : "s"})` : first.title,
+    status: null,
+    warnings: [],
+    stats,
+    findings,
+  };
+
+  const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport, "css");
+  applyFailOn(summary, failOnThreshold);
 }
 
 async function takeScreenshot(page, annotations, outPath) {
@@ -172,6 +228,8 @@ function parseArgs(argv) {
     config: null,
     failOn: null,
     screenshot: null,
+    crawl: false,
+    maxPages: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -184,6 +242,8 @@ function parseArgs(argv) {
     else if (arg === "--config") args.config = argv[++i];
     else if (arg === "--fail-on") args.failOn = argv[++i];
     else if (arg === "--screenshot") args.screenshot = argv[++i];
+    else if (arg === "--crawl") args.crawl = true;
+    else if (arg === "--max-pages") args.maxPages = argv[++i];
     else if (!arg.startsWith("-") && !args.url) args.url = arg;
   }
   return args;
