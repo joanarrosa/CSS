@@ -54,8 +54,11 @@ export function parseAllSources(cssSources) {
     walkTopLevel(ast, {
       onRule(ruleNode, stack) {
         const line = ruleNode.loc ? ruleNode.loc.start.line : null;
+        const ruleStartOffset = ruleNode.loc ? ruleNode.loc.start.offset : null;
+        const ruleEndOffset = ruleNode.loc ? ruleNode.loc.end.offset : null;
         const declarations = extractDeclarations(ruleNode.block);
         const selectorTexts = splitSelectorList(ruleNode.prelude);
+        const soleSelectorInBlock = selectorTexts.length === 1;
 
         for (const { text, node } of selectorTexts) {
           const spec = selectorSpecificity(node);
@@ -71,6 +74,9 @@ export function parseAllSources(cssSources) {
             line,
             order: globalOrder,
             sourceOrder: source.order,
+            soleSelectorInBlock,
+            ruleStartOffset,
+            ruleEndOffset,
           });
         }
         ruleIndexInSource++;
@@ -115,6 +121,8 @@ function extractDeclarations(blockNode) {
       value: csstree.generate(node.value).trim(),
       important: !!node.important,
       line: node.loc ? node.loc.start.line : null,
+      startOffset: node.loc ? node.loc.start.offset : null,
+      endOffset: node.loc ? node.loc.end.offset : null,
     });
   }
   return decls;

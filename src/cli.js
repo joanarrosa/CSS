@@ -32,6 +32,10 @@ Options:
                     a selector is only reported "unused" if it's unused on every crawled
                     page. Not yet supported together with --a11y-report or --screenshot.
   --max-pages <n>  Max pages to visit with --crawl (default: 5)
+  --fix            Write auto-fixed copies of the stylesheets for safe findings (dead
+                    overridden declarations, non-conflicting duplicate selectors) — see
+                    "Auto-fix mode" below. Not supported with --crawl or --a11y-report.
+  --fix-out <dir>  Directory to write auto-fixed stylesheets into (default: css-audit-fixes)
   --verbose        Print progress information to stderr
   -h, --help       Show this help
 `;
@@ -66,8 +70,17 @@ export async function main(argv) {
       logError("--crawl doesn't support --screenshot yet — run them separately.");
       process.exit(2);
     }
+    if (args.fix) {
+      logError("--crawl doesn't support --fix yet — run them separately.");
+      process.exit(2);
+    }
     await runCrawl(args, config, failOnThreshold);
     return;
+  }
+
+  if (args.fix && args.a11yReport) {
+    logError("--fix only applies to the CSS audit, not --a11y-report.");
+    process.exit(2);
   }
 
   let site;
@@ -99,7 +112,7 @@ export async function main(argv) {
       return;
     }
 
-    const { findings, stats } = await runFullAnalysis(site, { verbose: args.verbose, ignoreRules: config.ignore });
+    const { findings, stats, autoFix } = await runFullAnalysis(site, { verbose: args.verbose, ignoreRules: config.ignore });
 
     const reportData = {
       url: site.url,
@@ -112,6 +125,7 @@ export async function main(argv) {
     };
 
     if (args.screenshot) await takeScreenshot(site.page, buildCssAnnotations(findings), args.screenshot);
+    if (args.fix) await writeAutoFixes(autoFix, args.fixOut || "css-audit-fixes");
     const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport, "css");
     applyFailOn(summary, failOnThreshold);
   } finally {
@@ -155,6 +169,47 @@ async function runCrawl(args, config, failOnThreshold) {
 
   const summary = await writeReport(reportData, args, printTerminalReport, toJsonReport, "css");
   applyFailOn(summary, failOnThreshold);
+}
+
+async function writeAutoFixes(autoFix, outDir) {
+  const { fixedSources, applied, skipped } = autoFix;
+
+  if (fixedSources.length === 0) {
+    info(applied.length === 0 ? "Auto-fix: nothing safe to fix." : "Auto-fix: no fixes could be applied (no writable source offsets).");
+  } else {
+    const fs = await import("node:fs/promises");
+    await fs.mkdir(outDir, { recursive: true });
+    const used = new Set();
+    for (const { source, fixed } of fixedSources) {
+      const filename = uniqueFilename(source, used);
+      await fs.writeFile(`${outDir}/${filename}`, fixed, "utf8");
+    }
+    info(`Auto-fix: ${applied.length} fix(es) applied across ${fixedSources.length} source(s), written to ${outDir}/`);
+    for (const a of applied) info(`  - ${a.description}`);
+  }
+
+  if (skipped.length) {
+    info(`Auto-fix: ${skipped.length} finding(s) need manual review:`);
+    for (const s of skipped) info(`  - ${s.description}: ${s.reason}`);
+  }
+}
+
+function uniqueFilename(label, used) {
+  let base = label
+    .replace(/^https?:\/\//, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  if (!base) base = "stylesheet";
+  if (!base.endsWith(".css")) base += ".css";
+  let name = base;
+  let i = 2;
+  while (used.has(name)) {
+    name = base.replace(/\.css$/, `-${i}.css`);
+    i++;
+  }
+  used.add(name);
+  return name;
 }
 
 async function takeScreenshot(page, annotations, outPath) {
@@ -230,6 +285,8 @@ function parseArgs(argv) {
     screenshot: null,
     crawl: false,
     maxPages: null,
+    fix: false,
+    fixOut: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -244,6 +301,8 @@ function parseArgs(argv) {
     else if (arg === "--screenshot") args.screenshot = argv[++i];
     else if (arg === "--crawl") args.crawl = true;
     else if (arg === "--max-pages") args.maxPages = argv[++i];
+    else if (arg === "--fix") args.fix = true;
+    else if (arg === "--fix-out") args.fixOut = argv[++i];
     else if (!arg.startsWith("-") && !args.url) args.url = arg;
   }
   return args;

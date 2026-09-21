@@ -65,6 +65,8 @@ css-audit <url>
 | `--screenshot <file>` | Save an annotated screenshot — see "Annotated screenshot" below |
 | `--crawl`         | Crawl same-origin pages and merge results — see "Crawling multiple pages" below |
 | `--max-pages <n>` | Max pages to visit with `--crawl` (default: 5)            |
+| `--fix`           | Write auto-fixed stylesheets for safe findings — see "Auto-fix mode" below |
+| `--fix-out <dir>` | Directory to write auto-fixed stylesheets into (default: `css-audit-fixes`) |
 | `--verbose`, `-v` | Print progress to stderr while it runs                   |
 | `--help`, `-h`    | Show usage                                                |
 
@@ -181,6 +183,40 @@ repeated once per page); `meta.pageCount`/`meta.pages` in the JSON output
 records how many of the crawled pages each finding applies to. Not yet
 supported together with `--a11y-report` or `--screenshot` — run those
 separately.
+
+#### Auto-fix mode
+
+```bash
+node bin/css-audit.js https://your-site.com --fix
+```
+
+Automatically fixes the two kinds of findings that can be corrected with
+zero risk of changing how the page renders:
+
+- **Dead declarations** (from Overrides) — a declaration the live-DOM pass
+  already proved never wins the cascade on any matched element is deleted
+  outright. If removing it empties out a rule entirely, the whole now-empty
+  rule is removed too.
+- **Non-conflicting duplicate selectors** (from Duplicates) — when the same
+  single-selector rule is defined more than once in the same source with no
+  property set to two different values across the occurrences, the
+  occurrences are merged into one rule at the position of the last one, so
+  cascade order — and the result on screen — doesn't change.
+
+Everything else is left alone on purpose: "unused" selectors may be used via
+JS-toggled classes, `:hover`/`:focus`, or pages/viewports this run didn't
+check (see "Limitations"); duplicate selectors with genuinely conflicting
+values could silently pick a different winner if merged automatically;
+inline `style=""` attributes live in the HTML, not a CSS source file this
+tool can rewrite. Anything skipped for one of these reasons is listed with
+why, so you know what still needs a human look.
+
+css-audit only ever has the CSS it fetched over the network — it never has
+a checkout of your project to edit in place — so `--fix` never touches your
+real files. It writes a fixed copy of each affected stylesheet/`<style>`
+block into `--fix-out <dir>` (default `css-audit-fixes/`) for you to review
+and copy back into your codebase (or diff against the original). Not yet
+supported together with `--crawl` or `--a11y-report`.
 
 ### Web UI
 

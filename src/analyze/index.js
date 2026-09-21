@@ -10,6 +10,7 @@ import { analyzePerformance } from "./performance.js";
 import { makeFinding } from "../utils/finding.js";
 import { info } from "../utils/logger.js";
 import { partitionIgnored } from "../config.js";
+import { computeAutoFixes } from "../autofix.js";
 
 export async function runFullAnalysis({ page, cssSources, inlineStyleElements }, { verbose = false, ignoreRules = [] } = {}) {
   if (verbose) info("Parsing CSS...");
@@ -44,6 +45,7 @@ export async function runFullAnalysis({ page, cssSources, inlineStyleElements },
     // alone can't tell you a selector matched, since a used selector with no
     // other issues produces no finding at all.
     selectorMatches: buildSelectorMatches(domResult),
+    autoFix: computeAutoFixes({ rules, domResult, cssSources }),
   };
 }
 
