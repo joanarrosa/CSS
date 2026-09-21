@@ -341,3 +341,33 @@ that doesn't need a live browser — including `overrides.js` and
 real page. `collect.js`/`domMatch.js`/`accessibility.js`/`axeAudit.js`
 aren't unit tested (they need a real Chromium + DOM), but are covered by
 the manual fixture-site smoke test above.
+
+## Publishing to npm
+
+The package is publish-ready (`package.json` has `bin`, `files`, `license`,
+`repository`, `engines`, and a `prepublishOnly` script that runs the test
+suite), but actually publishing it needs *your* npm account — that step
+can't be done from here. To ship a release:
+
+```bash
+npm login                 # once, if you haven't already
+npm version patch         # or minor/major — bumps the version and commits + tags it
+npm publish                # runs the tests (prepublishOnly), then uploads
+git push --follow-tags     # push the version bump + tag this created
+```
+
+`npm pack --dry-run` shows exactly what would be uploaded without
+publishing anything — useful for double-checking the file list first (it
+should be `bin/`, `src/`, `public/`, `examples/`, `README.md`, `LICENSE`,
+and `package.json` — nothing from `test/` or `test-fixtures/`).
+
+If the name `css-audit` is already taken on the npm registry, `npm publish`
+will fail with `403 Forbidden` — in that case either publish it scoped to
+your username (change `"name"` in `package.json` to `"@your-npm-username/css-audit"`
+and run `npm publish --access public`) or pick a different unique name.
+
+Once published, anyone can run it with zero setup via:
+
+```bash
+npx css-audit https://example.com
+```

@@ -7,12 +7,42 @@
     "css-audit": "./bin/css-audit.js",
     "css-audit-web": "./bin/css-audit-web.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "examples"
+  ],
   "scripts": {
     "start": "node bin/css-audit.js",
     "serve": "node bin/css-audit-web.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm test"
   },
+  "keywords": [
+    "css",
+    "audit",
+    "linter",
+    "accessibility",
+    "a11y",
+    "wcag",
+    "playwright",
+    "cli",
+    "unused-css",
+    "specificity"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joanarrosa/CSS.git"
+  },
+  "homepage": "https://github.com/joanarrosa/CSS#readme",
+  "bugs": {
+    "url": "https://github.com/joanarrosa/CSS/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "axe-core": "^4.13.0",
     "css-tree": "^2.3.1",
