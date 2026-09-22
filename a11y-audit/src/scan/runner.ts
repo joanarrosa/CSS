@@ -8,6 +8,7 @@ import { checkReflowAtZoom } from "../checks/reflowZoom.js";
 import { checkLiveRegions } from "../checks/liveRegions.js";
 import { parseAxeRun } from "../parse/axeResults.js";
 import { captureEvidenceScreenshot } from "./screenshot.js";
+import { dismissConsentBanner } from "./consent.js";
 
 export interface ScanRunResult {
   findings: Finding[];
@@ -37,6 +38,7 @@ export async function runScan(config: ScanConfig, onProgress?: (msg: string) => 
       for (const target of config.targets) {
         log(`Scanning ${target.name} @ ${viewport.name}...`);
         await page.goto(target.url, { waitUntil: "networkidle", timeout: 30000 });
+        await dismissConsentBanner(page, config.dismissText);
         await scanCurrentState(page, { pageName: target.name, url: page.url(), viewport: viewport.name }, config, findings, rawAxeRuns);
       }
 
@@ -47,6 +49,7 @@ export async function runScan(config: ScanConfig, onProgress?: (msg: string) => 
         } catch (err) {
           log(`  ! Flow "${flow.name}" failed to complete: ${(err as Error).message} — scanning whatever state it left the page in.`);
         }
+        await dismissConsentBanner(page, config.dismissText);
         await scanCurrentState(page, { pageName: flow.name, url: page.url(), viewport: viewport.name, flow: flow.name }, config, findings, rawAxeRuns);
       }
 

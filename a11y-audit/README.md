@@ -36,6 +36,29 @@ structural EN 301 549 §9.{SC} reference (EN 301 549 clause 9 adopts WCAG 2.1
 AA by direct reference), severity (axe's own critical/serious/moderate/minor
 scale), the actual HTML snippet, and a concrete fix — not generic advice.
 
+## Cookie/consent banners
+
+A banner sitting on top of the real page can pollute a scan two ways: axe and
+the manual checks end up testing the banner's own markup instead of (or on
+top of) the page underneath, and the banner can physically block interaction
+(keyboard-trap and focus checks especially). Before scanning each page (and
+after each flow), this tool tries to dismiss one, two ways:
+
+1. **Known vendors, zero configuration.** A short list of common
+   consent-management-platform selectors (OneTrust, Cookiebot, Didomi,
+   TrustArc, Quantcast, Osano, Usercentrics, Cookie Information) is tried
+   first — covers a large share of sites automatically.
+2. **Custom banners, via `--dismiss-text`** (CLI) or the "Cookie banner
+   button text" field (web UI). Give it the visible text of the banner's own
+   accept button (e.g. `Accepteer`, `Accept all`) and it'll click any
+   button/link matching that text. This is generic by design — the
+   mechanism is built in, the text is per-site configuration, the same
+   pattern `--flows` already uses for site-specific interactions. Nothing is
+   hardcoded to any one site.
+
+Best-effort only: if no banner exists, or nothing matches, the scan just
+proceeds against the page as-is.
+
 ## Setup
 
 ```bash
@@ -60,8 +83,15 @@ buttons once it's done.
 It doesn't just scan the one page you paste in — it looks for that site's
 sitemap first (`/sitemap.xml`, a sitemap index, or whatever `robots.txt`
 points at) and scans every page it lists, up to the **Max pages** field
-(default 20, cap 50). No sitemap found? It falls back to just the page you
-entered.
+(default 20, cap 50). No sitemap found? It crawls the site's own links
+instead, starting from the page you entered, breadth-first, same-origin only
+— up to the same **Max pages** cap. Neither finds anything beyond the one
+page? It falls back to just that page.
+
+If the site shows a cookie/consent banner, common vendors are dismissed
+automatically; for a custom banner, type its accept button's exact visible
+text into the "Cookie banner button text" field (see "Cookie/consent
+banners" below).
 
 The server keeps running in the background after you close the tab, so
 opening the page again later is instant — no need to double-click Start
@@ -151,10 +181,17 @@ node dist/cli.js -u https://example.com --sitemap --max-pages 30
 `--sitemap` replaces that single `--url` with every page listed in the
 site's sitemap (found via `robots.txt`'s `Sitemap:` directive, `/sitemap.xml`,
 or `/sitemap_index.xml`, including sitemap-of-sitemaps index files), capped
-at `--max-pages` (default 20). Only works with exactly one `--url` and no
-`--config` — it's meant to expand one page into "the whole site," not layer
-onto a list you already built yourself. Off by default for the CLI (the web
-UI does this automatically instead — see "Web UI" above).
+at `--max-pages` (default 20). If no sitemap exists, it falls back to
+crawling the site's own same-origin links breadth-first from that `--url`,
+up to the same cap. Only works with exactly one `--url` and no `--config` —
+it's meant to expand one page into "the whole site," not layer onto a list
+you already built yourself. Off by default for the CLI (the web UI does
+this automatically instead — see "Web UI" above).
+
+Pass `--dismiss-text "Accepteer"` (or whatever your target site's cookie
+banner button says) alongside it if the site shows a custom consent banner
+that would otherwise get in the way of crawling or scanning every page —
+see "Cookie/consent banners" above.
 
 ### Viewports
 
@@ -189,8 +226,9 @@ Exits 1 if the result is worse than `<value>`:
 | `-o, --out <dir>` | Output directory (default: `./reports/<timestamp>/`) |
 | `--fail-on <value>` | Exit 1 if worse than `<value>` — see "CI mode" |
 | `--no-screenshots` | Skip evidence screenshots (faster) |
-| `--sitemap` | With a single `--url`, scan every page the site's sitemap lists instead of just that one |
+| `--sitemap` | With a single `--url`, scan every page the site's sitemap lists (or, if none exists, every page found by crawling same-origin links) instead of just that one |
 | `--max-pages <n>` | Max pages to scan with `--sitemap` (default: 20) |
+| `--dismiss-text <text>` | Visible text of a cookie/consent banner's accept button to click before each scan (common vendors are handled automatically) |
 | `-v, --verbose` | Print scan progress |
 
 ## Output
@@ -252,4 +290,20 @@ There's also `test-fixtures/sitemap.xml` (listing `index.html` and
 
 ```bash
 node dist/cli.js -u http://localhost:8940/index.html --sitemap --viewport desktop
+```
+
+`index.html` also has a fake custom cookie banner (accept button labeled
+"Accepteer") to sanity-check `--dismiss-text`:
+
+```bash
+node dist/cli.js -u http://localhost:8940/index.html --dismiss-text "Accepteer" --viewport desktop
+```
+
+And `test-fixtures/crawl/` (three pages linking to each other, deliberately
+with no `sitemap.xml` of its own) to sanity-check the crawl fallback — serve
+it as its own origin so it doesn't inherit the sitemap above:
+
+```bash
+cd test-fixtures/crawl && python3 -m http.server 8941 &
+cd ../.. && node dist/cli.js -u http://localhost:8941/index.html --sitemap --viewport desktop --verbose
 ```

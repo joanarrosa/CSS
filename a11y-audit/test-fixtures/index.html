@@ -14,6 +14,12 @@
   </style>
 </head>
 <body>
+  <!-- Fake custom (non-vendor) cookie banner, to exercise the --dismiss-text fallback. -->
+  <div id="cookie-banner" style="position:fixed;bottom:0;left:0;right:0;background:#222;color:#fff;padding:16px;z-index:9999;">
+    <span>This site uses cookies.</span>
+    <button id="cookie-accept-btn" onclick="document.getElementById('cookie-banner').remove()">Accepteer</button>
+  </div>
+
   <!-- h1 skipped, jumps to h3: heading hierarchy violation -->
   <h3>Section title (should be h1 or follow one)</h3>
 

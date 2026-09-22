@@ -79,6 +79,8 @@ export interface ScanConfig {
   outDir: string;
   screenshots: boolean;
   chromiumExecutablePath?: string;
+  /** Visible text of a cookie/consent banner's "accept" button, for custom banners the built-in vendor list doesn't cover. */
+  dismissText?: string;
 }
 
 export interface ManualChecklistItem {

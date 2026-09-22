@@ -10,6 +10,7 @@ import { buildHtmlReport } from "./report/html.js";
 import { buildJsonReport } from "./report/json.js";
 import { buildCsvReport } from "./report/csv.js";
 import { discoverSitemapUrls, nameFromUrl } from "./scan/sitemap.js";
+import { crawlSameOrigin } from "./scan/crawler.js";
 import type { Flow, PageTarget, ReportData, Severity, Viewport } from "./types.js";
 
 const SEVERITY_ORDER: Severity[] = ["minor", "moderate", "serious", "critical"];
@@ -26,6 +27,7 @@ interface CliOptions {
   verbose: boolean;
   sitemap: boolean;
   maxPages?: string;
+  dismissText?: string;
 }
 
 async function main(): Promise<void> {
@@ -46,8 +48,13 @@ async function main(): Promise<void> {
     .option("-o, --out <dir>", "output directory (default: ./reports/<timestamp>/)")
     .option("--fail-on <value>", "exit 1 if the result is worse than <value>: a severity (critical/serious/moderate/minor) or a 0-100 score")
     .option("--no-screenshots", "skip evidence screenshots (faster)")
-    .option("--sitemap", "with a single --url, discover the site's sitemap and scan every page it lists instead of just that one", false)
-    .option("--max-pages <n>", "max pages to scan when --sitemap finds one (default: 20)")
+    .option(
+      "--sitemap",
+      "with a single --url, scan every page the site's sitemap lists (or, if none exists, every page found by crawling same-origin links) instead of just that one",
+      false
+    )
+    .option("--max-pages <n>", "max pages to scan with --sitemap (default: 20)")
+    .option("--dismiss-text <text>", "visible text of a cookie/consent banner's accept button to click before each scan (for custom banners; common vendors are handled automatically)")
     .option("-v, --verbose", "print scan progress", false)
     .parse(process.argv);
 
@@ -61,11 +68,12 @@ async function main(): Promise<void> {
     if (Array.isArray(raw.viewports)) configViewports = raw.viewports;
   }
 
+  const chromiumExecutablePath = process.env.A11Y_AUDIT_CHROMIUM_PATH || process.env.CSS_AUDIT_CHROMIUM_PATH;
   let urlTargets: PageTarget[] = opts.url.map((u) => ({ name: nameFromUrl(u), url: u }));
 
   if (opts.sitemap) {
     if (configTargets.length > 0 || opts.url.length !== 1) {
-      fail("--sitemap only works with exactly one --url (and no --config targets) — it replaces that one page with everything the site's sitemap lists.");
+      fail("--sitemap only works with exactly one --url (and no --config targets) — it replaces that one page with everything the site's sitemap (or crawl) finds.");
     }
     const maxPages = opts.maxPages ? Number(opts.maxPages) : 20;
     if (!Number.isInteger(maxPages) || maxPages < 1) {
@@ -77,8 +85,20 @@ async function main(): Promise<void> {
       const capped = sitemapUrls.slice(0, maxPages);
       urlTargets = capped.map((u) => ({ name: nameFromUrl(u), url: u }));
       if (opts.verbose) console.error(`[a11y-audit] Found a sitemap with ${sitemapUrls.length} URL(s) — scanning ${capped.length}.`);
-    } else if (opts.verbose) {
-      console.error("[a11y-audit] No sitemap found — scanning just the one page given.");
+    } else {
+      if (opts.verbose) console.error("[a11y-audit] No sitemap found — crawling the site's links instead...");
+      const crawled = await crawlSameOrigin(opts.url[0], {
+        maxPages,
+        dismissText: opts.dismissText,
+        chromiumExecutablePath,
+        log: opts.verbose ? (msg) => console.error(`[a11y-audit] ${msg}`) : undefined,
+      });
+      if (crawled.length > 1) {
+        urlTargets = crawled.map((u) => ({ name: nameFromUrl(u), url: u }));
+        if (opts.verbose) console.error(`[a11y-audit] Crawled ${crawled.length} page(s) from this site.`);
+      } else if (opts.verbose) {
+        console.error("[a11y-audit] Could only find this one page — scanning it alone.");
+      }
     }
   }
 
@@ -133,7 +153,8 @@ async function main(): Promise<void> {
     baseUrl: baseUrl ?? "",
     outDir,
     screenshots: opts.screenshots,
-    chromiumExecutablePath: process.env.A11Y_AUDIT_CHROMIUM_PATH || process.env.CSS_AUDIT_CHROMIUM_PATH,
+    chromiumExecutablePath,
+    dismissText: opts.dismissText,
   };
 
   const result = await runScan(config, log);

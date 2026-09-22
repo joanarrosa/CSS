@@ -11,6 +11,7 @@ import { buildJsonReport } from "./report/json.js";
 import { buildCsvReport } from "./report/csv.js";
 import { buildAppShellHtml } from "./report/templates/appShell.js";
 import { discoverSitemapUrls, nameFromUrl } from "./scan/sitemap.js";
+import { crawlSameOrigin } from "./scan/crawler.js";
 import type { PageTarget, Viewport } from "./types.js";
 
 const MAX_PAGES_CAP = 50;
@@ -156,6 +157,7 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
   }
 
   const maxPages = Math.min(MAX_PAGES_CAP, Math.max(1, Number(body.maxPages) || DEFAULT_MAX_PAGES));
+  const dismissText = typeof body.dismissText === "string" && body.dismissText.trim() ? body.dismissText.trim() : undefined;
 
   res.writeHead(200, {
     "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -172,6 +174,8 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
   const outDir = path.join(REPORTS_ROOT, scanId);
   await mkdir(outDir, { recursive: true });
 
+  const chromiumExecutablePath = process.env.A11Y_AUDIT_CHROMIUM_PATH || process.env.CSS_AUDIT_CHROMIUM_PATH;
+
   let targets: PageTarget[];
   try {
     send({ type: "progress", message: "Looking for a sitemap..." });
@@ -187,22 +191,35 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
             : `Found a sitemap with ${capped.length} URL(s) — scanning all of them.`,
       });
     } else {
-      targets = [{ name: nameFromUrl(parsedUrl.toString()), url: parsedUrl.toString() }];
-      send({ type: "progress", message: "No sitemap found — scanning just this page." });
+      send({ type: "progress", message: "No sitemap found — crawling the site's links instead..." });
+      const crawled = await crawlSameOrigin(parsedUrl.toString(), {
+        maxPages,
+        dismissText,
+        chromiumExecutablePath,
+        log: (msg) => send({ type: "progress", message: msg }),
+      });
+      if (crawled.length > 1) {
+        targets = crawled.map((u) => ({ name: nameFromUrl(u), url: u }));
+        send({ type: "progress", message: `Crawled ${crawled.length} page(s) from this site.` });
+      } else {
+        targets = [{ name: nameFromUrl(parsedUrl.toString()), url: parsedUrl.toString() }];
+        send({ type: "progress", message: "Could only find this one page — scanning it alone." });
+      }
     }
   } catch {
     targets = [{ name: nameFromUrl(parsedUrl.toString()), url: parsedUrl.toString() }];
-    send({ type: "progress", message: "Couldn't check for a sitemap — scanning just this page." });
+    send({ type: "progress", message: "Page discovery failed — scanning just this page." });
   }
 
   const config = {
     targets,
+    dismissText,
     flows: [],
     viewports,
     baseUrl: parsedUrl.origin,
     outDir,
     screenshots: true,
-    chromiumExecutablePath: process.env.A11Y_AUDIT_CHROMIUM_PATH || process.env.CSS_AUDIT_CHROMIUM_PATH,
+    chromiumExecutablePath,
   };
 
   try {
