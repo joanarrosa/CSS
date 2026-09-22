@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+
+# Scan output can contain a client's real page content/screenshots — never commit it.
+reports/*
+!reports/.gitkeep
