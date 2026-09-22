@@ -174,6 +174,50 @@ section > h2 {
   flex-shrink: 0;
 }
 
+.glossary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.glossary-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.glossary-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.sc-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+.glossary-name {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.glossary-desc {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.badge.level-A { background: var(--bg); color: var(--text-dim); border: 1px solid var(--border); }
+.badge.level-AA { background: var(--accent-bg, var(--bg)); color: var(--accent); }
+.badge.level-AAA { background: var(--bonus-bg); color: var(--bonus); }
+.badge.principle-badge { background: var(--low-bg); color: var(--low); }
+
 .checklist {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -422,6 +466,29 @@ section > h2 {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+}
+
+.max-pages-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.max-pages-field input {
+  width: 56px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.scan-hint {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.4;
 }
 
 .primary-btn {

@@ -10,7 +10,11 @@ import { buildHtmlReport } from "./report/html.js";
 import { buildJsonReport } from "./report/json.js";
 import { buildCsvReport } from "./report/csv.js";
 import { buildAppShellHtml } from "./report/templates/appShell.js";
-import type { Viewport } from "./types.js";
+import { discoverSitemapUrls, nameFromUrl } from "./scan/sitemap.js";
+import type { PageTarget, Viewport } from "./types.js";
+
+const MAX_PAGES_CAP = 50;
+const DEFAULT_MAX_PAGES = 20;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.join(__dirname, "report", "templates");
@@ -151,6 +155,8 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
     return;
   }
 
+  const maxPages = Math.min(MAX_PAGES_CAP, Math.max(1, Number(body.maxPages) || DEFAULT_MAX_PAGES));
+
   res.writeHead(200, {
     "Content-Type": "application/x-ndjson; charset=utf-8",
     "Cache-Control": "no-cache",
@@ -166,8 +172,31 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
   const outDir = path.join(REPORTS_ROOT, scanId);
   await mkdir(outDir, { recursive: true });
 
+  let targets: PageTarget[];
+  try {
+    send({ type: "progress", message: "Looking for a sitemap..." });
+    const sitemapUrls = await discoverSitemapUrls(parsedUrl.toString(), { maxUrls: maxPages });
+    if (sitemapUrls.length > 0) {
+      const capped = sitemapUrls.slice(0, maxPages);
+      targets = capped.map((u) => ({ name: nameFromUrl(u), url: u }));
+      send({
+        type: "progress",
+        message:
+          sitemapUrls.length > capped.length
+            ? `Found a sitemap with ${sitemapUrls.length} URL(s) — scanning the first ${capped.length} (raise Max pages to scan more).`
+            : `Found a sitemap with ${capped.length} URL(s) — scanning all of them.`,
+      });
+    } else {
+      targets = [{ name: nameFromUrl(parsedUrl.toString()), url: parsedUrl.toString() }];
+      send({ type: "progress", message: "No sitemap found — scanning just this page." });
+    }
+  } catch {
+    targets = [{ name: nameFromUrl(parsedUrl.toString()), url: parsedUrl.toString() }];
+    send({ type: "progress", message: "Couldn't check for a sitemap — scanning just this page." });
+  }
+
   const config = {
-    targets: [{ name: parsedUrl.hostname + parsedUrl.pathname.replace(/\/+$/, ""), url: parsedUrl.toString() }],
+    targets,
     flows: [],
     viewports,
     baseUrl: parsedUrl.origin,
@@ -177,7 +206,7 @@ async function handleScan(req: IncomingMessage, res: ServerResponse): Promise<vo
   };
 
   try {
-    send({ type: "progress", message: `Launching browser, scanning ${parsedUrl.toString()}...` });
+    send({ type: "progress", message: `Launching browser — scanning ${config.targets.length} page(s)...` });
     const result = await runScan(config, (msg) => send({ type: "progress", message: msg }));
     send({ type: "progress", message: "Building report..." });
     const reportData = buildReportData(result.findings, config, result);

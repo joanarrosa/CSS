@@ -25,8 +25,12 @@ export function buildAppShellHtml(): string {
         <label><input type="checkbox" name="viewport" value="tablet" checked /> Tablet</label>
         <label><input type="checkbox" name="viewport" value="mobile" checked /> Mobile</label>
       </div>
+      <label class="max-pages-field">Max pages
+        <input type="number" id="max-pages-input" min="1" max="50" value="20" />
+      </label>
       <button type="submit" id="analyze-btn" class="primary-btn">Analyze</button>
     </form>
+    <div class="scan-hint">Looks for a sitemap at that URL's domain and scans every page it finds (up to "Max pages"). No sitemap? Falls back to just the one page you entered.</div>
     <div id="scan-status" class="scan-status hidden"></div>
   </div>
 
@@ -39,6 +43,7 @@ export function buildAppShellHtml(): string {
   </div>
 </div>
 
+<script src="/assets/glossary.js"></script>
 <script src="/assets/renderer.js"></script>
 <script src="/assets/app.js"></script>
 </body>

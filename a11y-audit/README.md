@@ -57,6 +57,12 @@ a URL, pick which viewports to test, click **Analyze**, and watch the same
 dashboard the HTML report uses fill in live, with Download JSON/CSV/HTML
 buttons once it's done.
 
+It doesn't just scan the one page you paste in — it looks for that site's
+sitemap first (`/sitemap.xml`, a sitemap index, or whatever `robots.txt`
+points at) and scans every page it lists, up to the **Max pages** field
+(default 20, cap 50). No sitemap found? It falls back to just the page you
+entered.
+
 The server keeps running in the background after you close the tab, so
 opening the page again later is instant — no need to double-click Start
 again. To actually stop it, double-click **`Stop a11y-audit.vbs`**, or just
@@ -136,6 +142,20 @@ A flow's `run(page, baseUrl)` is a plain Playwright function — write your own
 directly (matching the `Flow` type in `src/types.ts`) for anything the
 factories don't cover; you're not limited to the four shipped ones.
 
+### Scanning a whole site (sitemap)
+
+```bash
+node dist/cli.js -u https://example.com --sitemap --max-pages 30
+```
+
+`--sitemap` replaces that single `--url` with every page listed in the
+site's sitemap (found via `robots.txt`'s `Sitemap:` directive, `/sitemap.xml`,
+or `/sitemap_index.xml`, including sitemap-of-sitemaps index files), capped
+at `--max-pages` (default 20). Only works with exactly one `--url` and no
+`--config` — it's meant to expand one page into "the whole site," not layer
+onto a list you already built yourself. Off by default for the CLI (the web
+UI does this automatically instead — see "Web UI" above).
+
 ### Viewports
 
 Desktop (1440×900), tablet (768×1024), and mobile (375×812) are all scanned
@@ -169,6 +189,8 @@ Exits 1 if the result is worse than `<value>`:
 | `-o, --out <dir>` | Output directory (default: `./reports/<timestamp>/`) |
 | `--fail-on <value>` | Exit 1 if worse than `<value>` — see "CI mode" |
 | `--no-screenshots` | Skip evidence screenshots (faster) |
+| `--sitemap` | With a single `--url`, scan every page the site's sitemap lists instead of just that one |
+| `--max-pages <n>` | Max pages to scan with `--sitemap` (default: 20) |
 | `-v, --verbose` | Print scan progress |
 
 ## Output
@@ -180,8 +202,10 @@ boxing the actual elements behind each finding.
 
 - **`report.html`** — a single self-contained file (CSS/JS inlined) you can
   double-click or email: overall score, counts by severity, a WCAG-SC bar
-  chart, the manual verification checklist, and every finding — filterable
-  by severity/source/WCAG criterion/page — each with its WCAG criterion,
+  chart, a plain-language glossary decoding every WCAG success criterion
+  that showed up (name, level, POUR principle, what it means), the manual
+  verification checklist, and every finding — filterable by
+  severity/WCAG criterion/POUR principle — each with its WCAG criterion,
   severity, affected page(s), the actual HTML snippet, a concrete fix, and
   its evidence screenshot.
 - **`report.json`** — the full structured data, for CI or your own tooling.
@@ -221,4 +245,11 @@ sanity-checking changes:
 ```bash
 cd test-fixtures && python3 -m http.server 8940 &
 cd .. && node dist/cli.js -u http://localhost:8940/index.html --viewport desktop
+```
+
+There's also `test-fixtures/sitemap.xml` (listing `index.html` and
+`page2.html`) to sanity-check `--sitemap`:
+
+```bash
+node dist/cli.js -u http://localhost:8940/index.html --sitemap --viewport desktop
 ```

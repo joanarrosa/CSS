@@ -18,6 +18,7 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
  */
 export function buildHtmlReport(data: ReportData): string {
   const css = readFileSync(path.join(TEMPLATES_DIR, "report.css"), "utf8");
+  const glossaryJs = readFileSync(path.join(TEMPLATES_DIR, "glossary.js"), "utf8");
   const rendererJs = readFileSync(path.join(TEMPLATES_DIR, "renderer.js"), "utf8");
   const bootstrapJs = readFileSync(path.join(TEMPLATES_DIR, "report.js"), "utf8");
 
@@ -50,6 +51,7 @@ export function buildHtmlReport(data: ReportData): string {
 </div>
 
 <script>window.__A11Y_REPORT_DATA__ = ${json};</script>
+<script>${glossaryJs}</script>
 <script>${rendererJs}</script>
 <script>${bootstrapJs}</script>
 </body>

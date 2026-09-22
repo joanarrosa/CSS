@@ -9,6 +9,7 @@ import { buildReportData } from "./report/aggregate.js";
 import { buildHtmlReport } from "./report/html.js";
 import { buildJsonReport } from "./report/json.js";
 import { buildCsvReport } from "./report/csv.js";
+import { discoverSitemapUrls, nameFromUrl } from "./scan/sitemap.js";
 import type { Flow, PageTarget, ReportData, Severity, Viewport } from "./types.js";
 
 const SEVERITY_ORDER: Severity[] = ["minor", "moderate", "serious", "critical"];
@@ -23,6 +24,8 @@ interface CliOptions {
   failOn?: string;
   screenshots: boolean;
   verbose: boolean;
+  sitemap: boolean;
+  maxPages?: string;
 }
 
 async function main(): Promise<void> {
@@ -43,6 +46,8 @@ async function main(): Promise<void> {
     .option("-o, --out <dir>", "output directory (default: ./reports/<timestamp>/)")
     .option("--fail-on <value>", "exit 1 if the result is worse than <value>: a severity (critical/serious/moderate/minor) or a 0-100 score")
     .option("--no-screenshots", "skip evidence screenshots (faster)")
+    .option("--sitemap", "with a single --url, discover the site's sitemap and scan every page it lists instead of just that one", false)
+    .option("--max-pages <n>", "max pages to scan when --sitemap finds one (default: 20)")
     .option("-v, --verbose", "print scan progress", false)
     .parse(process.argv);
 
@@ -56,7 +61,27 @@ async function main(): Promise<void> {
     if (Array.isArray(raw.viewports)) configViewports = raw.viewports;
   }
 
-  const urlTargets: PageTarget[] = opts.url.map((u) => ({ name: deriveNameFromUrl(u), url: u }));
+  let urlTargets: PageTarget[] = opts.url.map((u) => ({ name: nameFromUrl(u), url: u }));
+
+  if (opts.sitemap) {
+    if (configTargets.length > 0 || opts.url.length !== 1) {
+      fail("--sitemap only works with exactly one --url (and no --config targets) — it replaces that one page with everything the site's sitemap lists.");
+    }
+    const maxPages = opts.maxPages ? Number(opts.maxPages) : 20;
+    if (!Number.isInteger(maxPages) || maxPages < 1) {
+      fail(`Invalid --max-pages value "${opts.maxPages}" — must be a positive integer.`);
+    }
+    if (opts.verbose) console.error("[a11y-audit] Looking for a sitemap...");
+    const sitemapUrls = await discoverSitemapUrls(opts.url[0], { maxUrls: maxPages });
+    if (sitemapUrls.length > 0) {
+      const capped = sitemapUrls.slice(0, maxPages);
+      urlTargets = capped.map((u) => ({ name: nameFromUrl(u), url: u }));
+      if (opts.verbose) console.error(`[a11y-audit] Found a sitemap with ${sitemapUrls.length} URL(s) — scanning ${capped.length}.`);
+    } else if (opts.verbose) {
+      console.error("[a11y-audit] No sitemap found — scanning just the one page given.");
+    }
+  }
+
   const targets = [...configTargets, ...urlTargets];
 
   let flows: Flow[] = [];
@@ -160,16 +185,6 @@ function resolveViewports(names: string[], configViewports?: Viewport[]): Viewpo
     else out.push(v);
   }
   return out;
-}
-
-function deriveNameFromUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const p = u.pathname.replace(/\/+$/, "");
-    return p && p !== "" ? `${u.hostname}${p}`.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "") || u.hostname : u.hostname;
-  } catch {
-    return url;
-  }
 }
 
 function collect(value: string, previous: string[]): string[] {

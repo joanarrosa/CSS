@@ -1,6 +1,7 @@
 (function () {
   const form = document.getElementById("scan-form");
   const urlInput = document.getElementById("url-input");
+  const maxPagesInput = document.getElementById("max-pages-input");
   const statusEl = document.getElementById("scan-status");
   const analyzeBtn = document.getElementById("analyze-btn");
   const downloadRow = document.getElementById("download-row");
@@ -17,6 +18,7 @@
     e.preventDefault();
     const url = urlInput.value.trim();
     const viewports = Array.from(form.querySelectorAll('input[name="viewport"]:checked')).map((el) => el.value);
+    const maxPages = Math.min(50, Math.max(1, Number(maxPagesInput.value) || 20));
     if (!url) return;
     if (viewports.length === 0) {
       setStatus("Pick at least one viewport.", true);
@@ -38,7 +40,7 @@
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, viewports }),
+        body: JSON.stringify({ url, viewports, maxPages }),
       });
 
       if (!res.body) {

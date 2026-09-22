@@ -25,9 +25,29 @@ window.A11yReportRenderer = (function () {
     });
   }
 
+  // "1.4.3" vs "1.4.10" needs numeric-per-segment comparison — plain string
+  // sort would put "1.4.10" before "1.4.3".
+  function compareSC(a, b) {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const diff = (pa[i] || 0) - (pb[i] || 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  }
+
+  function principleOf(sc) {
+    return Number(sc.split(".")[0]);
+  }
+
+  function principleLabel(p) {
+    return (window.WCAG_PRINCIPLE_LABEL && window.WCAG_PRINCIPLE_LABEL[p]) || `Principle ${p}`;
+  }
+
   function renderReport(data, opts) {
     const screenshotBase = (opts && opts.screenshotBase) || "";
-    const state = { severity: "all", wcag: "all", source: "all", page: "all" };
+    const state = { severity: "all", wcag: "all", principle: "all" };
 
     document.getElementById("report-root").classList.remove("hidden");
 
@@ -71,6 +91,38 @@ window.A11yReportRenderer = (function () {
         .join("");
     }
 
+    function renderGlossary() {
+      const el = document.getElementById("wcag-glossary");
+      const scs = Object.keys(data.summary.byWcagCriterion).sort(compareSC);
+      if (scs.length === 0) {
+        el.innerHTML = `<div class="empty-state">No WCAG success criteria to explain — nothing was found 🎉</div>`;
+        return;
+      }
+      const glossary = window.WCAG_GLOSSARY || {};
+      el.innerHTML = scs
+        .map((sc) => {
+          const g = glossary[sc];
+          if (!g) {
+            return `
+            <div class="glossary-item">
+              <div class="glossary-head"><span class="sc-num">${escapeHtml(sc)}</span></div>
+              <div class="glossary-desc">No local description for this criterion — see the WCAG spec for SC ${escapeHtml(sc)}.</div>
+            </div>`;
+          }
+          return `
+          <div class="glossary-item">
+            <div class="glossary-head">
+              <span class="sc-num">${escapeHtml(sc)}</span>
+              <span class="badge level-${escapeHtml(g.level)}">${escapeHtml(g.level)}</span>
+              <span class="badge principle-badge">${escapeHtml(principleLabel(g.principle))}</span>
+              <span class="glossary-name">${escapeHtml(g.name)}</span>
+            </div>
+            <div class="glossary-desc">${escapeHtml(g.description)}</div>
+          </div>`;
+        })
+        .join("");
+    }
+
     function renderChecklist() {
       const el = document.getElementById("manual-checklist");
       const section = el.closest("section");
@@ -84,30 +136,31 @@ window.A11yReportRenderer = (function () {
         .join("");
     }
 
-    function uniqueValues(key) {
-      return [...new Set(data.findings.map((f) => f[key]).filter(Boolean))];
+    function findingPrinciples(f) {
+      return new Set(f.wcagCriteria.map(principleOf));
     }
 
     function renderFilters() {
       const severityCounts = {};
-      const sourceCounts = {};
-      const pageCounts = {};
+      const principleCounts = {};
       for (const f of data.findings) {
         severityCounts[f.severity] = (severityCounts[f.severity] || 0) + 1;
-        sourceCounts[f.source] = (sourceCounts[f.source] || 0) + 1;
-        pageCounts[f.page] = (pageCounts[f.page] || 0) + 1;
+        for (const p of findingPrinciples(f)) principleCounts[p] = (principleCounts[p] || 0) + 1;
       }
 
       renderChipGroup("severity-filters", "severity", ["all", ...SEVERITY_ORDER.filter((s) => severityCounts[s])], (v) =>
         v === "all" ? `All (${data.findings.length})` : `${SEVERITY_LABEL[v]} (${severityCounts[v]})`
       );
-      renderChipGroup("source-filters", "source", ["all", ...uniqueValues("source")], (v) =>
-        v === "all" ? "All" : `${v} (${sourceCounts[v]})`
-      );
-      renderChipGroup("page-filters", "page", ["all", ...uniqueValues("page")], (v) => (v === "all" ? "All" : `${v} (${pageCounts[v]})`));
 
-      const wcagValues = [...new Set(data.findings.flatMap((f) => f.wcagCriteria))].sort();
+      const wcagValues = [...new Set(data.findings.flatMap((f) => f.wcagCriteria))].sort(compareSC);
       renderChipGroup("wcag-filters", "wcag", ["all", ...wcagValues], (v) => (v === "all" ? "All" : v));
+
+      const principleValues = Object.keys(principleCounts)
+        .map(Number)
+        .sort((a, b) => a - b);
+      renderChipGroup("principle-filters", "principle", ["all", ...principleValues], (v) =>
+        v === "all" ? "All" : `${principleLabel(v)} (${principleCounts[v]})`
+      );
     }
 
     function renderChipGroup(containerId, key, values, label) {
@@ -115,9 +168,9 @@ window.A11yReportRenderer = (function () {
       el.innerHTML = values
         .map(
           (v) =>
-            `<button class="chip ${state[key] === v ? "active" : ""}" data-key="${key}" data-value="${escapeHtml(v)}">${escapeHtml(
-              label(v)
-            )}</button>`
+            `<button class="chip ${String(state[key]) === String(v) ? "active" : ""}" data-key="${key}" data-value="${escapeHtml(
+              v
+            )}">${escapeHtml(label(v))}</button>`
         )
         .join("");
       el.querySelectorAll(".chip").forEach((btn) => {
@@ -131,9 +184,8 @@ window.A11yReportRenderer = (function () {
 
     function matchesFilters(f) {
       if (state.severity !== "all" && f.severity !== state.severity) return false;
-      if (state.source !== "all" && f.source !== state.source) return false;
-      if (state.page !== "all" && f.page !== state.page) return false;
       if (state.wcag !== "all" && !f.wcagCriteria.includes(state.wcag)) return false;
+      if (state.principle !== "all" && !findingPrinciples(f).has(Number(state.principle))) return false;
       return true;
     }
 
@@ -201,6 +253,7 @@ window.A11yReportRenderer = (function () {
 
     renderScore();
     renderWcagBars();
+    renderGlossary();
     renderChecklist();
     renderFilters();
     renderFindings();

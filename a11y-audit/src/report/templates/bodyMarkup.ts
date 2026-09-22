@@ -22,6 +22,11 @@ export const REPORT_BODY_HTML = `
   </section>
 
   <section>
+    <h2>WCAG criteria in this report, decoded</h2>
+    <div id="wcag-glossary" class="glossary"></div>
+  </section>
+
+  <section>
     <h2>Manual verification still required</h2>
     <div class="checklist">
       <ul id="manual-checklist"></ul>
@@ -32,9 +37,8 @@ export const REPORT_BODY_HTML = `
     <h2>Findings, ranked by priority (severity → impact → effort)</h2>
     <div class="filter-panel">
       <div class="filter-group"><span class="flabel">Severity</span><span id="severity-filters"></span></div>
-      <div class="filter-group"><span class="flabel">Source</span><span id="source-filters"></span></div>
       <div class="filter-group"><span class="flabel">WCAG SC</span><span id="wcag-filters"></span></div>
-      <div class="filter-group"><span class="flabel">Page</span><span id="page-filters"></span></div>
+      <div class="filter-group"><span class="flabel">Principle</span><span id="principle-filters"></span></div>
     </div>
     <div id="result-count" class="result-count"></div>
     <div id="finding-list" class="finding-list"></div>
