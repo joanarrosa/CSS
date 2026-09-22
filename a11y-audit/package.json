@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
     "cli": "npm run build && node dist/cli.js",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "serve": "npm run build && node dist/server.js"
   },
   "license": "MIT",
   "dependencies": {

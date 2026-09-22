@@ -47,7 +47,30 @@ npm run build
 `npm install` also downloads a matching Chromium build (Playwright's
 postinstall step).
 
-## Usage
+## Web UI (no command line needed)
+
+Prefer clicking things over typing commands? Double-click **`Start a11y-audit.vbs`**
+in this folder (Windows). It starts the server invisibly in the background —
+no command prompt window at all — and automatically opens
+**http://localhost:4174** in your browser once it's ready. From there: paste
+a URL, pick which viewports to test, click **Analyze**, and watch the same
+dashboard the HTML report uses fill in live, with Download JSON/CSV/HTML
+buttons once it's done.
+
+The server keeps running in the background after you close the tab, so
+opening the page again later is instant — no need to double-click Start
+again. To actually stop it, double-click **`Stop a11y-audit.vbs`**, or just
+restart your PC.
+
+If your machine blocks `.vbs` scripts (some workplace policies do), use
+**`start-a11y-audit-visible.bat`** instead — it works the same way but shows
+a normal command-prompt window that you leave open while using the tool
+(closing it stops the server).
+
+Either way, the first launch takes a few extra seconds while it compiles —
+after that it starts fast.
+
+## CLI usage
 
 ```bash
 node dist/cli.js -u https://example.com

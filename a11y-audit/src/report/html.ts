@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReportData } from "../types.js";
+import { REPORT_BODY_HTML } from "./templates/bodyMarkup.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.join(__dirname, "templates");
@@ -17,7 +18,8 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
  */
 export function buildHtmlReport(data: ReportData): string {
   const css = readFileSync(path.join(TEMPLATES_DIR, "report.css"), "utf8");
-  const js = readFileSync(path.join(TEMPLATES_DIR, "report.js"), "utf8");
+  const rendererJs = readFileSync(path.join(TEMPLATES_DIR, "renderer.js"), "utf8");
+  const bootstrapJs = readFileSync(path.join(TEMPLATES_DIR, "report.js"), "utf8");
 
   // Escape "</script" and stray "<" so nothing in scanned page content
   // (titles, snippets, messages) can break out of the embedded <script> or
@@ -44,44 +46,12 @@ export function buildHtmlReport(data: ReportData): string {
     </div>
   </header>
 
-  <div class="score-row">
-    <div class="score-card">
-      <div id="score-value" class="score-big">—</div>
-      <div id="score-grade" class="score-label"></div>
-    </div>
-    <div id="severity-tiles" class="stat-grid"></div>
-  </div>
-  <div class="meta" id="scan-scope" style="margin-bottom: 20px;"></div>
-
-  <section>
-    <h2>Findings by WCAG success criterion</h2>
-    <div id="wcag-bars" class="wcag-bars"></div>
-  </section>
-
-  <section>
-    <h2>Manual verification still required</h2>
-    <div class="checklist">
-      <ul id="manual-checklist"></ul>
-    </div>
-  </section>
-
-  <section>
-    <h2>Findings, ranked by priority (severity → impact → effort)</h2>
-    <div class="filter-panel">
-      <div class="filter-group"><span class="flabel">Severity</span><span id="severity-filters"></span></div>
-      <div class="filter-group"><span class="flabel">Source</span><span id="source-filters"></span></div>
-      <div class="filter-group"><span class="flabel">WCAG SC</span><span id="wcag-filters"></span></div>
-      <div class="filter-group"><span class="flabel">Page</span><span id="page-filters"></span></div>
-    </div>
-    <div id="result-count" class="result-count"></div>
-    <div id="finding-list" class="finding-list"></div>
-  </section>
+  ${REPORT_BODY_HTML}
 </div>
 
-<div id="lightbox" class="lightbox"><img id="lightbox-img" src="" alt="" /></div>
-
 <script>window.__A11Y_REPORT_DATA__ = ${json};</script>
-<script>${js}</script>
+<script>${rendererJs}</script>
+<script>${bootstrapJs}</script>
 </body>
 </html>
 `;
