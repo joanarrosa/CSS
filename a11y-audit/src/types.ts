@@ -100,7 +100,8 @@ export interface ReportSummary {
 export interface ReportData {
   generatedAt: string;
   targets: PageTarget[];
-  flows: Flow[];
+  /** Just name/description — Flow.run isn't serializable and isn't report data anyway. */
+  flows: { name: string; description: string }[];
   viewports: Viewport[];
   findings: Finding[];
   summary: ReportSummary;
