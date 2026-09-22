@@ -162,6 +162,7 @@ section > h2 {
 }
 
 .wcag-row .bar-fill {
+  display: block;
   height: 100%;
   background: var(--accent);
 }
