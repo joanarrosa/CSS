@@ -25,13 +25,14 @@ export function buildAppShellHtml(): string {
         <label><input type="checkbox" name="viewport" value="tablet" checked /> Tablet</label>
         <label><input type="checkbox" name="viewport" value="mobile" checked /> Mobile</label>
       </div>
+      <label class="single-page-field"><input type="checkbox" id="single-page-checkbox" /> Only this page (no sitemap/crawl)</label>
       <label class="max-pages-field">Max pages
         <input type="number" id="max-pages-input" min="1" max="50" value="20" />
       </label>
       <input type="text" id="dismiss-text-input" class="dismiss-text-input" placeholder="Cookie banner button text (optional)" />
       <button type="submit" id="analyze-btn" class="primary-btn">Analyze</button>
     </form>
-    <div class="scan-hint">Looks for a sitemap at that URL's domain and scans every page it finds (up to "Max pages"); if there's no sitemap, it crawls the site's own links instead. No pages found either way? Falls back to just the one page you entered. Common cookie-banner vendors (OneTrust, Cookiebot, Didomi...) are dismissed automatically — for a custom banner, type its accept button's exact text above.</div>
+    <div class="scan-hint" id="scan-hint">Looks for a sitemap at that URL's domain and scans every page it finds (up to "Max pages"); if there's no sitemap, it crawls the site's own links instead. No pages found either way? Falls back to just the one page you entered. Common cookie-banner vendors (OneTrust, Cookiebot, Didomi...) are dismissed automatically — for a custom banner, type its accept button's exact text above.</div>
     <div id="scan-status" class="scan-status hidden"></div>
   </div>
 

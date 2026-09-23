@@ -1,8 +1,22 @@
 (function () {
   const form = document.getElementById("scan-form");
   const urlInput = document.getElementById("url-input");
+  const singlePageCheckbox = document.getElementById("single-page-checkbox");
+  const maxPagesField = document.querySelector(".max-pages-field");
   const maxPagesInput = document.getElementById("max-pages-input");
   const dismissTextInput = document.getElementById("dismiss-text-input");
+  const scanHint = document.getElementById("scan-hint");
+
+  const MULTI_PAGE_HINT =
+    'Looks for a sitemap at that URL\'s domain and scans every page it finds (up to "Max pages"); if there\'s no sitemap, it crawls the site\'s own links instead. No pages found either way? Falls back to just the one page you entered. Common cookie-banner vendors (OneTrust, Cookiebot, Didomi...) are dismissed automatically — for a custom banner, type its accept button\'s exact text above.';
+  const SINGLE_PAGE_HINT = "Scans only the exact page you entered — no sitemap lookup, no crawling other links.";
+
+  singlePageCheckbox.addEventListener("change", () => {
+    const single = singlePageCheckbox.checked;
+    maxPagesInput.disabled = single;
+    maxPagesField.classList.toggle("disabled", single);
+    scanHint.textContent = single ? SINGLE_PAGE_HINT : MULTI_PAGE_HINT;
+  });
   const statusEl = document.getElementById("scan-status");
   const analyzeBtn = document.getElementById("analyze-btn");
   const downloadRow = document.getElementById("download-row");
@@ -21,6 +35,7 @@
     const viewports = Array.from(form.querySelectorAll('input[name="viewport"]:checked')).map((el) => el.value);
     const maxPages = Math.min(50, Math.max(1, Number(maxPagesInput.value) || 20));
     const dismissText = dismissTextInput.value.trim();
+    const singlePageOnly = singlePageCheckbox.checked;
     if (!url) return;
     if (viewports.length === 0) {
       setStatus("Pick at least one viewport.", true);
@@ -42,7 +57,7 @@
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, viewports, maxPages, dismissText }),
+        body: JSON.stringify({ url, viewports, maxPages, dismissText, singlePageOnly }),
       });
 
       if (!res.body) {

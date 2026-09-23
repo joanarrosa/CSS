@@ -468,12 +468,25 @@ section > h2 {
   cursor: pointer;
 }
 
+.single-page-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
 .max-pages-field {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   color: var(--text-dim);
+}
+
+.max-pages-field.disabled {
+  opacity: 0.45;
 }
 
 .max-pages-field input {

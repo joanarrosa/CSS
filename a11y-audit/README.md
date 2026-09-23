@@ -88,6 +88,9 @@ instead, starting from the page you entered, breadth-first, same-origin only
 — up to the same **Max pages** cap. Neither finds anything beyond the one
 page? It falls back to just that page.
 
+Only want the exact page you paste in, with no sitemap lookup or crawling at
+all? Check **"Only this page (no sitemap/crawl)"** above the URL field.
+
 If the site shows a cookie/consent banner, common vendors are dismissed
 automatically; for a custom banner, type its accept button's exact visible
 text into the "Cookie banner button text" field (see "Cookie/consent
